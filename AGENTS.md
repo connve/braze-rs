@@ -95,12 +95,21 @@ This is intentionally set up as the default for every endpoint from 0.1.0 so we 
 2. **Wrapper module**: add `braze/src/<api>.rs` (with `braze/src/<api>/` submodules for request/response types). The accessor returns a builder struct; `send` calls `crate::http::post_json` or a sibling helper. Gate behind a Cargo feature in `braze/Cargo.toml` if it's an opt-in surface.
 3. **Builder**: `#[must_use]`, `async fn send(self) -> Result<Response>`, `#[cfg_attr(feature = "trace", tracing::instrument(skip_all))]` on `send`.
 4. **Re-export**: surface request / response types from the wrapper module so callers don't depend on `braze_generated` directly.
-5. **Tests**: add `braze/tests/<api>.rs` using `mod common;` + `skip_if_no_credentials!()`. Wire it in `braze/Cargo.toml`:
+5. **Tests**: two files per endpoint.
+   - `braze/tests/<api>.rs` — live integration tests using `mod common;` + `skip_if_no_credentials!()`. Skipped silently when `BRAZE_CREDENTIALS` is unset.
+   - `braze/tests/mock_<api>.rs` — offline mock tests using `wiremock` (dev-dep). At minimum: one happy-path request+response check. These run on every `cargo test` so external contributors get coverage without a Braze account.
+
+   Wire both in `braze/Cargo.toml`:
 
    ```toml
    [[test]]
    name = "<api>"
    path = "tests/<api>.rs"
+   required-features = ["<api>"]
+
+   [[test]]
+   name = "mock_<api>"
+   path = "tests/mock_<api>.rs"
    required-features = ["<api>"]
    ```
 

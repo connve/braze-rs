@@ -21,12 +21,10 @@ jobs:
         run: |
           sudo apt update -qq
           sudo apt-get -qq install pkg-config libssl-dev git
-      - name: Add rustfmt and build
+      - name: Build and test
         run: |
-          rustup component add rustfmt
-          cargo build --verbose
-          cargo test --verbose
-          cargo fmt --all
+          cargo build --verbose --all-features --workspace
+          cargo test --verbose --all-features --workspace
 
   integration-test:
     runs-on: ubuntu-latest
@@ -41,19 +39,22 @@ jobs:
         run: |
           sudo apt update -qq
           sudo apt-get -qq install pkg-config libssl-dev git
-      - name: Write credentials file
+      - name: Materialise credentials
+        id: creds
         env:
           CREDENTIALS_JSON: ${{ secrets.BRAZE_CREDENTIALS }}
         run: |
-          if [ -z "$CREDENTIALS_JSON" ]; then
-            echo "::warning::BRAZE_CREDENTIALS secret is not set — integration tests will skip"
-            exit 0
+          if [ -n "$CREDENTIALS_JSON" ]; then
+            printf '%s' "$CREDENTIALS_JSON" > "$RUNNER_TEMP/braze_credentials.json"
+            echo "have_creds=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "::notice::BRAZE_CREDENTIALS secret is not set — skipping live integration tests"
           fi
-          printf '%s' "$CREDENTIALS_JSON" > "$RUNNER_TEMP/braze_credentials.json"
       - name: Run integration tests
+        if: steps.creds.outputs.have_creds == 'true'
         env:
           BRAZE_CREDENTIALS: ${{ runner.temp }}/braze_credentials.json
-        run: cargo test --verbose --test export
+        run: cargo test --verbose --all-features --workspace --test export
 
   test-rust-nightly:
     runs-on: ubuntu-latest
@@ -68,9 +69,7 @@ jobs:
         run: |
           sudo apt update -qq
           sudo apt-get -qq install pkg-config libssl-dev git
-      - name: Add rustfmt and build
+      - name: Build and test
         run: |
-          rustup component add rustfmt
-          cargo build --verbose
-          cargo test --verbose
-          cargo fmt --all
+          cargo build --verbose --all-features --workspace
+          cargo test --verbose --all-features --workspace
