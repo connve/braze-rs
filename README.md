@@ -22,13 +22,10 @@ ergonomic per-endpoint modules on top.
 ## Quick start
 
 ```rust
-use braze::{Client, Credentials, export::ExportUsersByIdsRequest};
+use braze::{Client, export::ExportUsersByIdsRequest};
 
 let client = Client::builder()
-    .credentials(Credentials {
-        api_key: std::env::var("BRAZE_API_KEY")?,
-        rest_endpoint: "https://rest.iad-01.braze.com".into(),
-    })
+    .credentials_file(std::env::var("BRAZE_CREDENTIALS")?)?
     .build()?;
 
 let response = client
@@ -38,6 +35,7 @@ let response = client
         fields_to_export: Some(vec!["email".into()]),
         ..Default::default()
     })
+    .send()
     .await?;
 ```
 
@@ -67,16 +65,6 @@ cargo run --example export_users -- external_user_id_1 external_user_id_2
 | API | Endpoint | Status |
 | --- | --- | --- |
 | Export | `POST /users/export/ids` | ✅ |
-
-## Testing
-
-```bash
-cargo fmt --all
-cargo clippy --workspace --all-targets -- -D warnings
-cargo test --workspace
-```
-
-Integration tests skip silently when `BRAZE_CREDENTIALS` is unset.
 
 ## License
 

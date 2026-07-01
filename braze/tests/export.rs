@@ -21,6 +21,7 @@ async fn export_users_by_unknown_external_id_returns_invalid() -> Result {
             fields_to_export: Some(vec!["external_id".into(), "email".into()]),
             ..Default::default()
         })
+        .send()
         .await?;
 
     assert_eq!(response.message, "success");
@@ -39,6 +40,7 @@ async fn export_users_requires_at_least_one_identifier() -> Result {
     let result = client
         .export()
         .users_by_ids(&ExportUsersByIdsRequest::default())
+        .send()
         .await;
 
     // Braze returns 400 when no identifier is supplied.

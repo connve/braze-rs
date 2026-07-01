@@ -44,6 +44,7 @@ async fn main() -> Result<()> {
             ]),
             ..Default::default()
         })
+        .send()
         .await?;
 
     println!("message: {}", response.message);

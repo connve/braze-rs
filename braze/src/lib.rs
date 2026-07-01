@@ -10,13 +10,10 @@
 //!
 //! ```no_run
 //! # async fn run() -> Result<(), braze::Error> {
-//! use braze::{Client, Credentials, export::ExportUsersByIdsRequest};
+//! use braze::{Client, export::ExportUsersByIdsRequest};
 //!
 //! let client = Client::builder()
-//!     .credentials(Credentials {
-//!         api_key: std::env::var("BRAZE_API_KEY").unwrap(),
-//!         rest_endpoint: "https://rest.iad-01.braze.com".into(),
-//!     })
+//!     .credentials_file(std::env::var("BRAZE_CREDENTIALS").unwrap())?
 //!     .build()?;
 //!
 //! let response = client
@@ -26,6 +23,7 @@
 //!         fields_to_export: Some(vec!["email".into(), "first_name".into()]),
 //!         ..Default::default()
 //!     })
+//!     .send()
 //!     .await?;
 //!
 //! println!("{} users returned", response.users.len());
