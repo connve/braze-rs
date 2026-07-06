@@ -1,0 +1,51 @@
+[workspace]
+resolver = "2"
+members = ["braze", "generated/braze"]
+
+[workspace.package]
+version = "0.1.0"
+authors = ["CONNVE"]
+license = "MPL-2.0"
+edition = "2021"
+rust-version = "1.88"
+description = "Unofficial Rust SDK for Braze APIs"
+repository = "https://github.com/connve/braze-rs"
+homepage = "https://github.com/connve/braze-rs"
+documentation = "https://docs.rs/braze"
+readme = "README.md"
+keywords = ["braze", "sdk", "api", "messaging"]
+categories = ["api-bindings", "asynchronous"]
+publish = true
+
+[workspace.dependencies]
+braze_generated = { path = "generated/braze", version = "0.1.0" }
+tokio = { version = "1.48", default-features = false, features = [
+    "macros",
+    "rt-multi-thread",
+    "sync",
+] }
+serde = { version = "1.0", default-features = false, features = ["derive"] }
+serde_json = { version = "1.0", default-features = false, features = ["std"] }
+reqwest = { version = "0.13", default-features = false, features = [
+    "json",
+    "rustls",
+] }
+thiserror = { version = "2.0", default-features = false, features = ["std"] }
+url = { version = "2.5", default-features = false }
+tracing = { version = "0.1", default-features = false, features = ["std", "attributes"] }
+tracing-subscriber = { version = "0.3", default-features = false, features = [
+    "fmt",
+    "ansi",
+] }
+chrono = { version = "0.4", default-features = false, features = [
+    "serde",
+    "std",
+] }
+anyhow = { version = "1.0", default-features = false, features = ["std"] }
+bytes = { version = "1.11", default-features = false, features = ["std"] }
+futures = { version = "0.3", default-features = false, features = ["std"] }
+progenitor = "0.13"
+progenitor-client = "0.13"
+openapiv3 = { version = "2.2", default-features = false }
+serde_yaml = { version = "0.9", default-features = false }
+wiremock = "0.6"

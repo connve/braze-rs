@@ -1,0 +1,75 @@
+name: Test
+
+on:
+  pull_request:
+    branches:
+      - main
+  push:
+    branches:
+      - main
+
+jobs:
+  test-rust-latest:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          override: true
+      - name: Install system dependencies
+        run: |
+          sudo apt update -qq
+          sudo apt-get -qq install pkg-config libssl-dev git
+      - name: Build and test
+        run: |
+          cargo build --verbose --all-features --workspace
+          cargo test --verbose --all-features --workspace
+
+  integration-test:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          override: true
+      - name: Install system dependencies
+        run: |
+          sudo apt update -qq
+          sudo apt-get -qq install pkg-config libssl-dev git
+      - name: Materialise credentials
+        id: creds
+        env:
+          CREDENTIALS_JSON: ${{ secrets.BRAZE_CREDENTIALS }}
+        run: |
+          if [ -n "$CREDENTIALS_JSON" ]; then
+            printf '%s' "$CREDENTIALS_JSON" > "$RUNNER_TEMP/braze_credentials.json"
+            echo "have_creds=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "::notice::BRAZE_CREDENTIALS secret is not set — skipping live integration tests"
+          fi
+      - name: Run integration tests
+        if: steps.creds.outputs.have_creds == 'true'
+        env:
+          BRAZE_CREDENTIALS: ${{ runner.temp }}/braze_credentials.json
+        run: cargo test --verbose --all-features --workspace --test export
+
+  test-rust-nightly:
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions-rs/toolchain@v1
+        with:
+          toolchain: nightly
+          override: true
+      - name: Install system dependencies
+        run: |
+          sudo apt update -qq
+          sudo apt-get -qq install pkg-config libssl-dev git
+      - name: Build and test
+        run: |
+          cargo build --verbose --all-features --workspace
+          cargo test --verbose --all-features --workspace

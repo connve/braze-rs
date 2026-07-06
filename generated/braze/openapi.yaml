@@ -1,0 +1,418 @@
+openapi: 3.0.3
+info:
+  title: Braze REST API
+  version: 0.1.0
+  description: 'Hand-maintained subset of the Braze REST API. Initial coverage: users/export/ids.'
+  license:
+    name: MPL-2.0
+servers:
+- url: https://rest.iad-01.braze.com
+  description: US-01
+- url: https://rest.iad-02.braze.com
+  description: US-02
+- url: https://rest.iad-03.braze.com
+  description: US-03
+- url: https://rest.iad-04.braze.com
+  description: US-04
+- url: https://rest.iad-05.braze.com
+  description: US-05
+- url: https://rest.iad-06.braze.com
+  description: US-06
+- url: https://rest.iad-08.braze.com
+  description: US-08
+- url: https://rest.fra-01.braze.eu
+  description: EU-01
+- url: https://rest.fra-02.braze.eu
+  description: EU-02
+paths:
+  /users/export/ids:
+    post:
+      summary: Export user profile by identifier
+      description: "> Use this endpoint to export data from any user profile by specifying\
+        \ a user identifier. \n  \n\nUp to 50 `external_ids` or `user_aliases` can\
+        \ be included in a single request. Should you want to specify `device_id`,\
+        \ `email_address` , or `phone`, only one of any identifier can be included\
+        \ per request.\n\n## Prerequisites\n\nTo use this endpoint, you\u2019ll need\
+        \ an [API key](https://www.braze.com/docs/api/basics#rest-api-key/) with the\
+        \ `users.export.ids` permission.\n\n## Rate limit\n\nFor customers who onboarded\
+        \ with Braze on or after August 16, 2021, we apply a rate limit of 2,500 requests\
+        \ per minute to this endpoint, as documented in [API rate limits](https://www.braze.com/docs/api/api_limits/).\n\
+        \n## Request parameters\n\n| Parameter | Required | Data Type | Description\
+        \ |\n| --- | --- | --- | --- |\n| `external_ids` | Optional | Array of strings\
+        \ | External identifiers for users you wish export. |\n| `user_aliases` |\
+        \ Optional | Array of user alias object | [User aliases](https://www.braze.com/docs/api/objects_filters/user_alias_object/)\
+        \ for users to export. |\n| `device_id` | Optional | String | Device identifier,\
+        \ as returned by various SDK methods such as `getDeviceId`. |\n| `braze_id`\
+        \ | Optional | String | Braze identifier for a particular user. |\n| `email_address`\
+        \ | Optional | String | Email address of user. |\n| `phone` | Optional | String\
+        \ in [E.164](https://en.wikipedia.org/wiki/E.164) format | Phone number of\
+        \ user. |\n| `fields_to_export` | Optional | Array of strings | Name of user\
+        \ data fields to export. Defaults to all if not provided. |\n\n## Fields to\
+        \ export\n\nThe following is a list of valid `fields_to_export`. Using `fields_to_export`\
+        \ to minimize the data returned can improve response time of this API endpoint:\n\
+        \n| Field to export | Data type | Description |\n| --- | --- | --- |\n| `apps`\
+        \ | Array | Apps this user has logged sessions for, which includes the fields:\
+        \  <br>  <br>\\- `name`: app name  <br>\\- `platform`: app platform, such\
+        \ as iOS, Android, or Web  <br>\\- `version`: app version number or name \
+        \ <br>\\- `sessions`: total number of sessions for this app  <br>\\- `first_used`:\
+        \ date of first session  <br>\\- `last_used`: date of last session  <br> \
+        \ <br>All fields are strings. |\n| `attributed_campaign` | String | Data from\
+        \ [attribution integrations](https:/www.braze.com/docs/partners/message_orchestration/attribution),\
+        \ if set up. Identifier for a particular ad campaign. |\n| `attributed_source`\
+        \ | String | Data from [attribution integrations](https:/www.braze.com/docs/partners/message_orchestration/attribution),\
+        \ if set up. Identifier for the platform the ad was on. |\n| `attributed_adgroup`\
+        \ | String | Data from [attribution integrations](https:/www.braze.com/docs/partners/message_orchestration/attribution),\
+        \ if set up. Identifier for an optional sub-grouping below campaign. |\n|\
+        \ `attributed_ad` | String | Data from [attribution integrations](https:/www.braze.com/docs/partners/message_orchestration/attribution),\
+        \ if set up. Identifier for an optional sub-grouping below campaign and adgroup.\
+        \ |\n| `braze_id` | String | Device-specific unique user identifier set by\
+        \ Braze for this user. |\n| `country` | String | User's country using [ISO\
+        \ 3166-1 alpha-2](https://en.wikipedia.org/wiki/ISO_3166-1_alpha-2) standard.\
+        \ |\n| `created_at` | String | Date and time for when the user profile was\
+        \ created, in ISO 8601 format. |\n| `custom_attributes` | Object | Custom\
+        \ attribute key-value pairs for this user. |\n| `custom_events` | Array |\
+        \ Custom events attributed to this user in the last 90 days. |\n| `devices`\
+        \ | Array | Information about the user's device, which could include the following\
+        \ depending on platform:  <br>  <br>\\- `model`: Device's model name  <br>\\\
+        - `os`: Device's operating system  <br>\\- `carrier`: Device's service carrier,\
+        \ if available  <br>\\- `idfv`: (iOS) Braze's device identifier, the Apple\
+        \ Identifier for Vendor, if exists  <br>\\- `idfa`: (iOS) Identifier for Advertising,\
+        \ if exists  <br>\\- `device_id`: (Android) Braze's device identifier  <br>\\\
+        - `google_ad_id`: (Android) Google Play Advertising Identifier, if exists\
+        \  <br>\\- `roku_ad_id`: (Roku) Roku Advertising Identifier  <br>\\- `ad_tracking_enabled`:\
+        \ If ad tracking is enabled on the device, can be true or false |\n| `dob`\
+        \ | String | User's date of birth in the format `YYYY-MM-DD`. |\n| `email`\
+        \ | String | User's email address. |\n| `external_id` | String | Unique user\
+        \ identifier for identified users. |\n| `first_name` | String | User's first\
+        \ name. |\n| `gender` | String | User's gender. Possible values are:  <br>\
+        \  <br>\\- `M`: male  <br>\\- `F`: female  <br>\\- `O`: other  <br>\\- `N`:\
+        \ not applicable  <br>\\- `P`: prefer not to say  <br>\\- `nil`: unknown |\n\
+        | `home_city` | String | User's home city. |\n| `language` | String | User's\
+        \ language in ISO-639-1 standard. |\n| `last_coordinates` | Array of floats\
+        \ | User's most recent device location, formatted as `[longitude, latitude]`.\
+        \ |\n| `last_name` | String | User's last name. |\n| `phone` | String | User's\
+        \ telephone number in E.164 format. |\n| `purchase`s | Array | Purchases this\
+        \ user has made in the last 90 days. |\n| `random_bucket` | Integer | User's\
+        \ [random bucket number](https:/www.braze.com/docs/user_guide/data_and_analytics/braze_currents/event_glossary/customer_behavior_events#random-bucket-number-event),\
+        \ used to create uniformly distributed segments of random users. |\n| `time_zone`\
+        \ | String | User's time zone in the same format as the IANA Time Zone Database.\
+        \ |\n| `total_revenue` | Float | Total revenue attributed to this user. Total\
+        \ revenue is calculated based on purchases the user made during conversion\
+        \ windows for the campaigns and Canvases they received. |\n| `uninstalled_at`\
+        \ | Timestamp | Date and time the user uninstalls the app. Omitted if the\
+        \ app has not been uninstalled. |\n| `user_aliases` | Object | [User aliases\
+        \ object](https:/www.braze.com/docs/api/objects_filters/user_alias_object#user-alias-object-specification)\
+        \ containing the `alias_name` and `alias_label`, if exists. |\n\nBe aware\
+        \ that the `/users/export/ids` endpoint will pull together the entire user\
+        \ profile for this user, including data such as all campaigns and Canvases\
+        \ received, all custom events performed, all purchases made, and all custom\
+        \ attributes. As a result, this endpoint is slower than other REST API endpoints.\n\
+        \nDepending on the data requested, this API endpoint may not be sufficient\
+        \ to meet your needs due to the 2,500 requests per minute rate limit. If you\
+        \ anticipate using this endpoint regularly to export users, instead consider\
+        \ exporting users by segment, which is asynchronous and more optimized for\
+        \ larger data pulls.\n\n### Response\n\n``` json\nContent-Type: application/json\n\
+        Authorization: Bearer YOUR-REST-API-KEY\n{\n    \"message\": (required, string)\
+        \ the status of the export, returns 'success' when completed without errors,\n\
+        \    \"users\" : (array of object) the data for each of the exported users,\
+        \ may be empty if no users are found,\n    \"invalid_user_ids\" : (optional,\
+        \ array of string) each of the identifiers provided in the request that did\
+        \ not correspond to a known user\n}\n\n ```\n\nFor an example of the data\
+        \ that is accessible via this endpoint see the following example.\n\n### Example\
+        \ user export file output\n\nUser export object (we will include the least\
+        \ data possible - if a field is missing from the object it should be assumed\
+        \ to be null, false, or empty):\n\n``` json\n{\n    \"created_at\": (string),\n\
+        \    \"external_id\" : (string),\n    \"user_aliases\" : [\n      {\n    \
+        \    \"alias_name\" : (string),\n        \"alias_label\" : (string)\n    \
+        \  }\n    ],\n    \"braze_id\": (string),\n    \"first_name\" : (string),\n\
+        \    \"last_name\" : (string),\n    \"email\" : (string),\n    \"dob\" : (string)\
+        \ date for the user's date of birth,\n    \"home_city\" : (string),\n    \"\
+        country\" : (string) ISO-3166-1 alpha-2 standard,\n    \"phone\" : (string),\n\
+        \    \"language\" : (string) ISO-639-1 standard,\n    \"time_zone\" : (string),\n\
+        \    \"last_coordinates\" : (array of float) [lon, lat],\n    \"gender\" :\
+        \ (string) \"M\" | \"F\",\n    \"total_revenue\" : (float),\n    \"attributed_campaign\"\
+        \ : (string),\n    \"attributed_source\" : (string),\n    \"attributed_adgroup\"\
+        \ : (string),\n    \"attributed_ad\" : (string),\n    \"push_subscribe\" :\
+        \ (string) \"opted_in\" | \"subscribed\" | \"unsubscribed\",\n    \"email_subscribe\"\
+        \ : (string) \"opted_in\" | \"subscribed\" | \"unsubscribed\",\n    \"custom_attributes\"\
+        \ : (object) custom attribute key-value pairs,\n    \"custom_events\" : [\n\
+        \      {\n        \"name\" : (string),\n        \"first\" : (string) date,\n\
+        \        \"last\" : (string) date,\n        \"count\" : (int)\n      },\n\
+        \      ...\n    ],\n    \"purchases\" : [\n      {\n        \"name\" : (string),\n\
+        \        \"first\" : (string) date,\n        \"last\" : (string) date,\n \
+        \       \"count\" : (int)\n      },\n      ...\n    ],\n    \"devices\" :\
+        \ [\n      {\n        \"model\" : (string),\n        \"os\" : (string),\n\
+        \        \"carrier\" : (string),\n        \"idfv\" : (string) only included\
+        \ for iOS devices when IDFV collection is enabled,\n        \"idfa\" : (string)\
+        \ only included for iOS devices when IDFA collection is enabled,\n       \
+        \ \"google_ad_id\" : (string) only included for Android devices when Google\
+        \ Play Advertising Identifier collection is enabled,\n        \"roku_ad_id\"\
+        \ : (string) only included for Roku devices,\n        \"ad_tracking_enabled\"\
+        \ : (bool)\n      },\n      ...\n    ],\n    \"push_tokens\" : [\n      {\n\
+        \        \"app\" : (string) app name,\n        \"platform\" : (string),\n\
+        \        \"token\" : (string)\n      },\n      ...\n    ],\n    \"apps\" :\
+        \ [\n      {\n        \"name\" : (string),\n        \"platform\" : (string),\n\
+        \        \"version\" : (string),\n        \"sessions\" : (integer),\n    \
+        \    \"first_used\" : (string) date,\n        \"last_used\" : (string) date\n\
+        \      },\n      ...\n    ],\n    \"campaigns_received\" : [\n      {\n  \
+        \      \"name\" : (string),\n        \"last_received\" : (string) date,\n\
+        \        \"engaged\" : \n         {\n           \"opened_email\" : (bool),\n\
+        \           \"opened_push\" : (bool),\n           \"clicked_email\" : (bool),\n\
+        \           \"clicked_triggered_in_app_message\" : (bool)\n          },\n\
+        \          \"converted\" : (bool),\n          \"api_campaign_id\" : (string),\n\
+        \          \"variation_name\" : (optional, string) exists only if it is a\
+        \ multivariate campaign,\n          \"variation_api_id\" : (optional, string)\
+        \ exists only if it is a multivariate campaign,\n          \"in_control\"\
+        \ : (optional, bool) exists only if it is a multivariate campaign\n      \
+        \  },\n      ...\n    ],\n    \"canvases_received\": [\n      {\n        \"\
+        name\": (string),\n        \"api_canvas_id\": (string),\n        \"last_received_message\"\
+        : (string) date,\n        \"last_entered\": (string) date,\n        \"variation_name\"\
+        : (string),\n        \"in_control\": (bool),\n        \"last_exited\": (string)\
+        \ date,\n        \"steps_received\": [\n          {\n            \"name\"\
+        : (string),\n            \"api_canvas_step_id\": (string),\n            \"\
+        last_received\": (string) date\n          },\n          {\n            \"\
+        name\": (string),\n            \"api_canvas_step_id\": (string),\n       \
+        \     \"last_received\": (string) date\n          },\n          {\n      \
+        \      \"name\": (string),\n            \"api_canvas_step_id\": (string),\n\
+        \            \"last_received\": (string) date\n          }\n        ]\n  \
+        \    },\n      ...\n    ],\n    \"cards_clicked\" : [\n      {\n        \"\
+        name\" : (string)\n      },\n      ...\n    ]\n}\n\n ```\n\n#### Sample output\n\
+        \n``` json\n{\n    \"created_at\" : \"2020-07-10 15:00:00.000 UTC\",\n   \
+        \ \"external_id\" : \"A8i3mkd99\",\n    \"user_aliases\" : [\n      {\n  \
+        \      \"alias_name\" : \"user_123\",\n        \"alias_label\" : \"amplitude_id\"\
+        \n      }\n    ],\n    \"braze_id\": \"5fbd99bac125ca40511f2cb1\",\n    \"\
+        random_bucket\" : 2365,\n    \"first_name\" : \"Jane\",\n    \"last_name\"\
+        \ : \"Doe\",\n    \"email\" : \"example@braze.com\",\n    \"dob\" : \"1980-12-21\"\
+        ,\n    \"home_city\" : \"Chicago\",\n    \"country\" : \"US\",\n    \"phone\"\
+        \ : \"+442071838750\",\n    \"language\" : \"en\",\n    \"time_zone\" : \"\
+        Eastern Time (US & Canada)\",\n    \"last_coordinates\" : [41.84157636433568,\
+        \ -87.83520818508256],\n    \"gender\" : \"F\",\n    \"total_revenue\" : 65,\n\
+        \    \"attributed_campaign\" : \"braze_test_campaign_072219\",\n    \"attributed_source\"\
+        \ : \"braze_test_source_072219\",\n    \"attributed_adgroup\" : \"braze_test_adgroup_072219\"\
+        ,\n    \"attributed_ad\" : \"braze_test_ad_072219\",\n    \"push_subscribe\"\
+        \ : \"opted_in\", \n    \"push_opted_in_at\": \"2020-01-26T22:45:53.953Z\"\
+        ,\n    \"email_subscribe\" : \"subscribed\",\n    \"custom_attributes\": \n\
+        \    {\n      \"loyaltyId\": \"37c98b9d-9a7f-4b2f-a125-d873c5152856\",\n \
+        \     \"loyaltyPoints\": \"321\",\n       \"loyaltyPointsNumber\": 107\n \
+        \   },\n    \"custom_events\": [\n      {\n        \"name\": \"Loyalty Acknowledgement\"\
+        ,\n        \"first\": \"2021-06-28T17:02:43.032Z\",\n        \"last\": \"\
+        2021-06-28T17:02:43.032Z\",\n        \"count\": 1\n      },\n      ...\n \
+        \   ],\n    \"purchases\": [\n      {\n        \"name\": \"item_40834\",\n\
+        \        \"first\": \"2021-09-05T03:45:50.540Z\",\n        \"last\": \"2022-06-03T17:30:41.201Z\"\
+        ,\n        \"count\": 10\n      },\n      ...\n    ],\n    \"devices\": [\n\
+        \      {\n        \"model\": \"Pixel XL\",\n        \"os\": \"Android (Q)\"\
+        ,\n        \"carrier\": null,\n        \"device_id\": \"312ef2c1-83db-4789-967-554545a1bf7a\"\
+        ,\n        \"ad_tracking_enabled\": true\n      },\n      ...\n    ],\n  \
+        \  \"push_tokens\": [\n      {\n        \"app\": \"MovieCanon\",\n       \
+        \ \"platform\": \"Android\",\n        \"token\": \"12345abcd\",\n        \"\
+        device_id\": \"312ef2c1-83db-4789-967-554545a1bf7a\",\n        \"notifications_enabled\"\
+        : true\n      },\n      ...\n    ],\n    \"apps\": [\n      {\n        \"\
+        name\": \"MovieCannon\",\n        \"platform\": \"Android\",\n        \"version\"\
+        : \"3.29.0\",\n        \"sessions\": 1129,\n        \"first_used\": \"2020-02-02T19:56:19.142Z\"\
+        ,\n        \"last_used\": \"2021-11-11T00:25:19.201Z\"\n      },\n      ...\n\
+        \    ],\n    \"campaigns_received\": [\n      {\n        \"name\": \"Email\
+        \ Unsubscribe\",\n        \"api_campaign_id\": \"d72fdc84-ddda-44f1-a0d5-0e79f47ef942\"\
+        ,\n        \"last_received\": \"2022-06-02T03:07:38.105Z\",\n        \"engaged\"\
+        : \n        {\n           \"opened_email\": true\n        },\n        \"converted\"\
+        : true,\n        \"multiple_converted\": \n        {\n          \"Primary\
+        \ Conversion Event - A\": true\n        },\n        \"in_control\": false,\n\
+        \        \"variation_name\": \"Variant 1\",\n        \"variation_api_id\"\
+        : \"1bddc73a-a134-4784-9134-5b5574a9e0b8\"\n      },\n      ...\n    ],\n\
+        \    \"canvases_received\": [\n      {\n        \"name\": \"Non Global  Holdout\
+        \ Group 4/21/21\",\n        \"api_canvas_id\": \"46972a9d-dc81-473f-aa03-e3473b4ed781\"\
+        ,\n        \"last_received_message\": \"2021-07-07T20:46:24.136Z\",\n    \
+        \    \"last_entered\": \"2021-07-07T20:45:24.000+00:00\",\n        \"variation_name\"\
+        : \"Variant 1\",\n        \"in_control\": false,\n        \"last_entered_control_at\"\
+        : null,\n        \"last_exited\": \"2021-07-07T20:46:24.136Z\",\n        \"\
+        steps_received\": [\n          {\n            \"name\": \"Step\",\n      \
+        \      \"api_canvas_step_id\": \"43d1a349-c3c8-4be1-9fbe-ce708e4d1c39\",\n\
+        \            \"last_received\": \"2021-07-07T20:46:24.136Z\"\n          },\n\
+        \          ...\n        ]\n      }\n      ...\n    ],    \n    \"cards_clicked\"\
+        \ : [\n      {\n        \"name\" : \"Loyalty Promo\"\n      },\n      ...\n\
+        \    ]\n}\n\n ```\n\n> **Tip:** For help with CSV and API exports, visit [Export\
+        \ troubleshooting](https://www.braze.com/docs/user_guide/data_and_analytics/export_braze_data/export_troubleshooting/)."
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ExportUsersByIdsRequest'
+        required: true
+      parameters:
+      - name: Content-Type
+        in: header
+        schema:
+          type: string
+        example: application/json
+      - name: Authorization
+        in: header
+        schema:
+          type: string
+        example: Bearer {{api_key}}
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExportUsersByIdsResponse'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BrazeError'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BrazeError'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BrazeError'
+        '404':
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BrazeError'
+        '429':
+          description: Rate limited
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BrazeError'
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BrazeError'
+      operationId: exportUsersByIds
+      security:
+      - BearerAuth: []
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      description: Braze REST API key
+  schemas:
+    ExportUsersByIdsRequest:
+      type: object
+      properties:
+        external_ids:
+          type: array
+          items:
+            type: string
+        user_aliases:
+          type: array
+          items:
+            type: object
+            properties:
+              alias_name:
+                type: string
+              alias_label:
+                type: string
+        device_id:
+          type: string
+        braze_id:
+          type: string
+        email_address:
+          type: string
+          format: email
+        phone:
+          type: string
+        fields_to_export:
+          type: array
+          items:
+            type: string
+      title: ExportUsersByIdsRequest
+    ExportUsersByIdsResponse:
+      title: ExportUsersByIdsResponse
+      type: object
+      properties:
+        message:
+          type: string
+        users:
+          type: array
+          items:
+            $ref: '#/components/schemas/ExportedUser'
+        invalid_user_ids:
+          type: array
+          items:
+            type: string
+    ExportedUser:
+      title: ExportedUser
+      type: object
+      additionalProperties: true
+      properties:
+        created_at:
+          type: string
+          format: date-time
+        external_id:
+          type: string
+        braze_id:
+          type: string
+        first_name:
+          type: string
+        last_name:
+          type: string
+        email:
+          type: string
+        phone:
+          type: string
+        country:
+          type: string
+        custom_attributes:
+          type: object
+          additionalProperties: true
+        custom_events:
+          type: array
+          items:
+            type: object
+            additionalProperties: true
+        purchases:
+          type: array
+          items:
+            type: object
+            additionalProperties: true
+        devices:
+          type: array
+          items:
+            type: object
+            additionalProperties: true
+        push_tokens:
+          type: array
+          items:
+            type: object
+            additionalProperties: true
+        apps:
+          type: array
+          items:
+            type: object
+            additionalProperties: true
+        campaigns_received:
+          type: array
+          items:
+            type: object
+            additionalProperties: true
+        canvases_received:
+          type: array
+          items:
+            type: object
+            additionalProperties: true
+    BrazeError:
+      title: BrazeError
+      type: object
+      properties:
+        message:
+          type: string
+        errors:
+          type: array
+          items:
+            type: object
+            additionalProperties: true

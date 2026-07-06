@@ -1,0 +1,57 @@
+[package]
+name = "braze"
+version.workspace = true
+authors.workspace = true
+license.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+description = "Unofficial Rust SDK for Braze APIs"
+repository.workspace = true
+homepage.workspace = true
+documentation.workspace = true
+readme = "../README.md"
+keywords.workspace = true
+categories.workspace = true
+publish.workspace = true
+
+[lib]
+name = "braze"
+path = "src/lib.rs"
+
+[features]
+default = ["export"]
+export = []
+trace = []
+
+[dependencies]
+braze_generated = { workspace = true }
+tokio = { workspace = true }
+reqwest = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+thiserror = { workspace = true }
+url = { workspace = true }
+tracing = { workspace = true }
+chrono = { workspace = true }
+
+[dev-dependencies]
+tracing-subscriber = { workspace = true }
+tokio = { workspace = true, features = ["macros", "rt-multi-thread"] }
+anyhow = { workspace = true }
+wiremock = { workspace = true }
+serde_json = { workspace = true }
+
+[[example]]
+name = "export_users"
+path = "../examples/braze/export_users.rs"
+required-features = ["export"]
+
+[[test]]
+name = "export"
+path = "tests/export.rs"
+required-features = ["export"]
+
+[[test]]
+name = "mock_export"
+path = "tests/mock_export.rs"
+required-features = ["export"]
