@@ -45,3 +45,30 @@ pub fn client() -> Result<Client, Box<dyn std::error::Error>> {
     let client = Client::builder().credentials_file(path)?.build()?;
     Ok(client)
 }
+
+/// An ID that doesn't exist in any workspace, so calls using it never send a
+/// message or start an export.
+pub fn unknown_id(prefix: &str) -> String {
+    use std::time::{SystemTime, UNIX_EPOCH};
+    let nanos = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .map(|d| d.as_nanos())
+        .unwrap_or(0);
+    format!("braze-rs-test-{prefix}-{nanos:x}")
+}
+
+/// Asserts Braze accepted the key and rejected the request itself. A 401/403
+/// means auth is broken or the key lacks the endpoint's permission, which the
+/// live tests exist to catch.
+pub fn assert_rejected_by_braze<T: std::fmt::Debug>(result: braze::Result<T>) {
+    let err = result.expect_err("call against an unknown ID should fail");
+    assert!(
+        matches!(
+            &err,
+            braze::Error::Api { status, .. }
+                if status.is_client_error() && status.as_u16() != 401 && status.as_u16() != 403
+        ),
+        "expected a 4xx other than 401/403, got: {err:?}"
+    );
+    assert!(!err.is_retryable(), "4xx must not be retryable");
+}

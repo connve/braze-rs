@@ -2,7 +2,7 @@ openapi: 3.0.3
 info:
   title: Braze REST API
   version: 0.1.0
-  description: 'Hand-maintained subset of the Braze REST API. Initial coverage: users/export/ids.'
+  description: 'Hand-maintained subset of the Braze REST API.'
   license:
     name: MPL-2.0
 servers:
@@ -255,6 +255,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ExportUsersByIdsResponse'
+        '201':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExportUsersByIdsResponse'
         '400':
           description: Bad request
           content:
@@ -294,6 +300,364 @@ paths:
       operationId: exportUsersByIds
       security:
       - BearerAuth: []
+  /users/export/segment:
+    post:
+      summary: Export user profile by segment
+      description: Starts an asynchronous export of every user in a segment. Files go to the
+        configured S3/Azure/GCS bucket, or to a temporary `url` in the response when no bucket
+        is configured. Requires the `users.export.segment` permission. See
+        <https://www.braze.com/docs/api/endpoints/export/user_data/post_users_segment/>
+      operationId: exportUsersBySegment
+      security:
+      - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ExportUsersBySegmentRequest'
+      responses:
+        '200':
+          description: Export started
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExportUsersBySegmentResponse'
+        '201':
+          description: Export started
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExportUsersBySegmentResponse'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BrazeError'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BrazeError'
+        '429':
+          description: Rate limited, or an export of this segment is already running
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BrazeError'
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BrazeError'
+  /users/export/global_control_group:
+    post:
+      summary: Export user profile by Global Control Group
+      description: Starts an asynchronous export of every user in the Global Control Group.
+        Files go to the configured S3/Azure/GCS bucket, or to a temporary `url` in the response
+        when no bucket is configured. Requires the `users.export.global_control_group`
+        permission. See
+        <https://www.braze.com/docs/api/endpoints/export/user_data/post_users_global_control_group/>
+      operationId: exportUsersByGlobalControlGroup
+      security:
+      - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ExportUsersByGlobalControlGroupRequest'
+      responses:
+        '200':
+          description: Export started
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExportUsersByGlobalControlGroupResponse'
+        '201':
+          description: Export started
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExportUsersByGlobalControlGroupResponse'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BrazeError'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BrazeError'
+        '429':
+          description: Rate limited
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BrazeError'
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BrazeError'
+  /messages/send:
+    post:
+      summary: Send messages immediately using the API only
+      operationId: sendMessages
+      security:
+      - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SendMessagesRequest'
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SendMessagesResponse'
+        '201':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SendMessagesResponse'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BrazeError'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BrazeError'
+        '429':
+          description: Rate limited
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BrazeError'
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BrazeError'
+  /campaigns/trigger/send:
+    post:
+      summary: Send campaigns using API-triggered delivery
+      operationId: sendTriggeredCampaigns
+      security:
+      - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SendTriggeredCampaignsRequest'
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SendTriggeredCampaignsResponse'
+        '201':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SendTriggeredCampaignsResponse'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BrazeError'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BrazeError'
+        '429':
+          description: Rate limited
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BrazeError'
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BrazeError'
+  /canvas/trigger/send:
+    post:
+      summary: Send Canvas messages using API-triggered delivery
+      operationId: sendTriggeredCanvases
+      security:
+      - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SendTriggeredCanvasesRequest'
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SendTriggeredCanvasesResponse'
+        '201':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SendTriggeredCanvasesResponse'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BrazeError'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BrazeError'
+        '429':
+          description: Rate limited
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BrazeError'
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BrazeError'
+  /sends/id/create:
+    post:
+      summary: Create send IDs
+      operationId: createSendIds
+      security:
+      - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateSendIdsRequest'
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CreateSendIdsResponse'
+        '201':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CreateSendIdsResponse'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BrazeError'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BrazeError'
+        '429':
+          description: Rate limited
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BrazeError'
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BrazeError'
+  /transactional/v1/campaigns/{campaign_id}/send:
+    post:
+      summary: Send transactional emails using API-triggered delivery
+      operationId: sendTransactionalMessage
+      security:
+      - BearerAuth: []
+      parameters:
+      - name: campaign_id
+        in: path
+        required: true
+        schema:
+          type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SendTransactionalMessageRequest'
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SendTransactionalMessageResponse'
+        '201':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SendTransactionalMessageResponse'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BrazeError'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BrazeError'
+        '429':
+          description: Rate limited
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BrazeError'
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BrazeError'
 components:
   securitySchemes:
     BearerAuth:
@@ -311,12 +675,7 @@ components:
         user_aliases:
           type: array
           items:
-            type: object
-            properties:
-              alias_name:
-                type: string
-              alias_label:
-                type: string
+            $ref: '#/components/schemas/UserAlias'
         device_id:
           type: string
         braze_id:
@@ -345,10 +704,84 @@ components:
           type: array
           items:
             type: string
+      additionalProperties: {}
+    ExportUsersBySegmentRequest:
+      title: ExportUsersBySegmentRequest
+      type: object
+      required:
+      - segment_id
+      - fields_to_export
+      properties:
+        segment_id:
+          type: string
+        callback_endpoint:
+          type: string
+          description: Braze POSTs here when the export is ready.
+        fields_to_export:
+          type: array
+          items:
+            type: string
+        custom_attributes_to_export:
+          type: array
+          description: Up to 500 custom attribute names.
+          items:
+            type: string
+        output_format:
+          $ref: '#/components/schemas/ExportOutputFormat'
+        user_last_updated_at:
+          type: string
+          format: date-time
+          description: Only export users updated at or after this time.
+    ExportUsersBySegmentResponse:
+      title: ExportUsersBySegmentResponse
+      type: object
+      properties:
+        message:
+          type: string
+        object_prefix:
+          type: string
+        url:
+          type: string
+          description: Temporary download URL. Absent when a storage bucket is configured.
+      additionalProperties: {}
+    ExportUsersByGlobalControlGroupRequest:
+      title: ExportUsersByGlobalControlGroupRequest
+      type: object
+      properties:
+        callback_endpoint:
+          type: string
+          description: Braze POSTs here when the export is ready.
+        fields_to_export:
+          type: array
+          description: Required for accounts created after April 2021. Older accounts get
+            every field when it is left empty.
+          items:
+            type: string
+        output_format:
+          $ref: '#/components/schemas/ExportOutputFormat'
+    ExportUsersByGlobalControlGroupResponse:
+      title: ExportUsersByGlobalControlGroupResponse
+      type: object
+      properties:
+        message:
+          type: string
+        object_prefix:
+          type: string
+        url:
+          type: string
+          description: Temporary download URL. Absent when a storage bucket is configured.
+      additionalProperties: {}
+    ExportOutputFormat:
+      title: ExportOutputFormat
+      type: string
+      description: '`gzip` only applies when exporting to your own bucket.'
+      enum:
+      - zip
+      - gzip
     ExportedUser:
       title: ExportedUser
       type: object
-      additionalProperties: true
+      additionalProperties: {}
       properties:
         created_at:
           type: string
@@ -369,6 +802,7 @@ components:
           type: string
         custom_attributes:
           type: object
+          nullable: true
           additionalProperties: true
         custom_events:
           type: array
@@ -416,3 +850,283 @@ components:
           items:
             type: object
             additionalProperties: true
+    SendMessagesRequest:
+      title: SendMessagesRequest
+      type: object
+      properties:
+        broadcast:
+          type: boolean
+          default: false
+        external_user_ids:
+          type: array
+          items:
+            type: string
+        user_aliases:
+          type: array
+          items:
+            $ref: '#/components/schemas/UserAlias'
+        segment_id:
+          type: string
+        audience:
+          $ref: '#/components/schemas/ConnectedAudience'
+        campaign_id:
+          type: string
+        send_id:
+          type: string
+        override_frequency_capping:
+          type: boolean
+          default: false
+        recipient_subscription_state:
+          type: string
+          enum:
+          - opted_in
+          - subscribed
+          - all
+        messages:
+          $ref: '#/components/schemas/Messages'
+    SendMessagesResponse:
+      title: SendMessagesResponse
+      type: object
+      properties:
+        dispatch_id:
+          type: string
+        message:
+          type: string
+        errors:
+          type: array
+          items: {}
+      additionalProperties: {}
+    SendTriggeredCampaignsRequest:
+      title: SendTriggeredCampaignsRequest
+      type: object
+      required:
+      - campaign_id
+      properties:
+        campaign_id:
+          type: string
+        send_id:
+          type: string
+        trigger_properties:
+          type: object
+          additionalProperties: true
+        broadcast:
+          type: boolean
+          default: false
+        audience:
+          $ref: '#/components/schemas/ConnectedAudience'
+        recipients:
+          type: array
+          items:
+            $ref: '#/components/schemas/Recipient'
+        attachments:
+          type: array
+          items:
+            $ref: '#/components/schemas/Attachment'
+    SendTriggeredCampaignsResponse:
+      title: SendTriggeredCampaignsResponse
+      type: object
+      properties:
+        dispatch_id:
+          type: string
+        message:
+          type: string
+        notice:
+          type: string
+        errors:
+          type: array
+          items: {}
+      additionalProperties: {}
+    SendTriggeredCanvasesRequest:
+      title: SendTriggeredCanvasesRequest
+      type: object
+      required:
+      - canvas_id
+      properties:
+        canvas_id:
+          type: string
+        context:
+          type: object
+          additionalProperties: true
+        broadcast:
+          type: boolean
+          default: false
+        audience:
+          $ref: '#/components/schemas/ConnectedAudience'
+        recipients:
+          type: array
+          items:
+            $ref: '#/components/schemas/CanvasRecipient'
+    SendTriggeredCanvasesResponse:
+      title: SendTriggeredCanvasesResponse
+      type: object
+      properties:
+        dispatch_id:
+          type: string
+        message:
+          type: string
+        notice:
+          type: string
+        errors:
+          type: array
+          items: {}
+      additionalProperties: {}
+    CreateSendIdsRequest:
+      title: CreateSendIdsRequest
+      type: object
+      required:
+      - campaign_id
+      properties:
+        campaign_id:
+          type: string
+        send_id:
+          type: string
+    CreateSendIdsResponse:
+      title: CreateSendIdsResponse
+      type: object
+      properties:
+        message:
+          type: string
+        send_id:
+          type: string
+      additionalProperties: {}
+    SendTransactionalMessageRequest:
+      title: SendTransactionalMessageRequest
+      type: object
+      required:
+      - recipient
+      properties:
+        external_send_id:
+          type: string
+        trigger_properties:
+          type: object
+          additionalProperties: true
+        recipient:
+          $ref: '#/components/schemas/TransactionalRecipient'
+    SendTransactionalMessageResponse:
+      title: SendTransactionalMessageResponse
+      type: object
+      properties:
+        dispatch_id:
+          type: string
+        status:
+          type: string
+        metadata:
+          type: object
+          additionalProperties: true
+      additionalProperties: {}
+    UserAlias:
+      title: UserAlias
+      type: object
+      required:
+      - alias_name
+      - alias_label
+      properties:
+        alias_name:
+          type: string
+        alias_label:
+          type: string
+    ConnectedAudience:
+      title: ConnectedAudience
+      type: object
+      description: Connected audience filter object. Structure is recursive AND/OR with custom attributes and subscription filters.
+      additionalProperties: true
+    Recipient:
+      title: Recipient
+      type: object
+      properties:
+        external_user_id:
+          type: string
+        user_alias:
+          $ref: '#/components/schemas/UserAlias'
+        email:
+          type: string
+        prioritization:
+          type: array
+          items:
+            type: string
+        trigger_properties:
+          type: object
+          additionalProperties: true
+        send_to_existing_only:
+          type: boolean
+          description: Braze defaults to true. Not allowed with `user_alias`.
+        attributes:
+          type: object
+          additionalProperties: true
+    CanvasRecipient:
+      title: CanvasRecipient
+      type: object
+      properties:
+        external_user_id:
+          type: string
+        user_alias:
+          $ref: '#/components/schemas/UserAlias'
+        email:
+          type: string
+        prioritization:
+          type: array
+          items:
+            type: string
+        context:
+          type: object
+          additionalProperties: true
+        send_to_existing_only:
+          type: boolean
+          description: Braze defaults to true. Not allowed with `user_alias`.
+        attributes:
+          type: object
+          additionalProperties: true
+    TransactionalRecipient:
+      title: TransactionalRecipient
+      type: object
+      properties:
+        external_user_id:
+          type: string
+        user_alias:
+          $ref: '#/components/schemas/UserAlias'
+        attributes:
+          type: object
+          additionalProperties: true
+    Attachment:
+      title: Attachment
+      type: object
+      required:
+      - file_name
+      - url
+      properties:
+        file_name:
+          type: string
+        url:
+          type: string
+    Messages:
+      title: Messages
+      type: object
+      description: Messaging objects for different channels.
+      properties:
+        android_push:
+          type: object
+          additionalProperties: true
+        apple_push:
+          type: object
+          additionalProperties: true
+        content_card:
+          type: object
+          additionalProperties: true
+        email:
+          type: object
+          additionalProperties: true
+        kindle_push:
+          type: object
+          additionalProperties: true
+        web_push:
+          type: object
+          additionalProperties: true
+        webhook:
+          type: object
+          additionalProperties: true
+        whats_app:
+          type: object
+          additionalProperties: true
+        sms:
+          type: object
+          additionalProperties: true

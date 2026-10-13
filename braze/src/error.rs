@@ -14,6 +14,10 @@ pub enum Error {
     #[error("API key is required to call Braze")]
     MissingApiKey,
 
+    /// The API key contains characters that can't be sent in an HTTP header.
+    #[error("API key contains characters that are not allowed in an HTTP header")]
+    InvalidApiKey,
+
     /// The REST endpoint URL could not be parsed.
     #[error("invalid Braze REST endpoint")]
     InvalidEndpoint {
@@ -63,6 +67,24 @@ pub enum Error {
         #[source]
         source: serde_json::Error,
     },
+
+    /// A request header is either reserved by the SDK (see
+    /// [`Builder::default_headers`](crate::Builder::default_headers)) or could
+    /// not be converted into a valid `HeaderName` / `HeaderValue`.
+    #[error("invalid request header `{name}`")]
+    InvalidHeader {
+        /// The header name that was rejected.
+        name: String,
+    },
+
+    /// A caller-supplied ID used in the request path is empty, `.`, `..`, or
+    /// contains control characters, so it can't be sent as a single path
+    /// segment.
+    #[error("invalid path segment `{segment}`")]
+    InvalidPathSegment {
+        /// The rejected value.
+        segment: String,
+    },
 }
 
 impl Error {
@@ -70,6 +92,11 @@ impl Error {
     ///
     /// Returns `true` for transport failures, HTTP 408 / 425 / 429, and any
     /// 5xx response. Auth and other 4xx responses return `false`.
+    ///
+    /// This only says the failure may be transient. Braze can have processed
+    /// the request before a timeout or 5xx reached you, and the messaging send
+    /// endpoints have no idempotency key, so retrying one of them can deliver
+    /// a message twice. Retry sends only if a duplicate is acceptable.
     pub fn is_retryable(&self) -> bool {
         match self {
             Error::Http { source } => {
@@ -85,10 +112,13 @@ impl Error {
                     )
             }
             Error::MissingApiKey
+            | Error::InvalidApiKey
             | Error::InvalidEndpoint { .. }
             | Error::CredentialsIo { .. }
             | Error::CredentialsParse { .. }
-            | Error::Deserialize { .. } => false,
+            | Error::Deserialize { .. }
+            | Error::InvalidHeader { .. }
+            | Error::InvalidPathSegment { .. } => false,
         }
     }
 }
@@ -121,5 +151,9 @@ mod tests {
         assert!(!unauthorized.is_retryable());
 
         assert!(!Error::MissingApiKey.is_retryable());
+        assert!(!Error::InvalidHeader {
+            name: String::new()
+        }
+        .is_retryable());
     }
 }
