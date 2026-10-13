@@ -13,10 +13,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: actions-rs/toolchain@v1
-        with:
-          toolchain: stable
-          override: true
+      # rustup installs the toolchain pinned in `rust-toolchain.toml` on the
+      # first cargo call.
+      - uses: dtolnay/rust-toolchain@stable
       - name: Install system dependencies
         run: |
           sudo apt update -qq
@@ -31,14 +30,16 @@ jobs:
     if: github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository
     steps:
       - uses: actions/checkout@v4
-      - uses: actions-rs/toolchain@v1
-        with:
-          toolchain: stable
-          override: true
+      # rustup installs the toolchain pinned in `rust-toolchain.toml` on the
+      # first cargo call.
+      - uses: dtolnay/rust-toolchain@stable
       - name: Install system dependencies
         run: |
           sudo apt update -qq
           sudo apt-get -qq install pkg-config libssl-dev git
+      # Skips rather than fails while the repo has no BRAZE_CREDENTIALS
+      # secret. Once it is configured, switch to a hard failure so a missing
+      # secret can't turn this job silently green.
       - name: Materialise credentials
         id: creds
         env:
@@ -54,22 +55,42 @@ jobs:
         if: steps.creds.outputs.have_creds == 'true'
         env:
           BRAZE_CREDENTIALS: ${{ runner.temp }}/braze_credentials.json
-        run: cargo test --verbose --all-features --workspace --test export
+        # `--test '*'` picks up every file under `braze/tests/`, so a new
+        # integration test file runs here without editing this workflow.
+        run: cargo test --verbose --all-features -p braze --test '*'
 
   test-rust-nightly:
     runs-on: ubuntu-latest
     continue-on-error: true
     steps:
       - uses: actions/checkout@v4
-      - uses: actions-rs/toolchain@v1
-        with:
-          toolchain: nightly
-          override: true
+      # Explicit nightly override — `rust-toolchain.toml` pins stable, but
+      # this job intentionally exercises the nightly channel.
+      - uses: dtolnay/rust-toolchain@nightly
       - name: Install system dependencies
         run: |
           sudo apt update -qq
           sudo apt-get -qq install pkg-config libssl-dev git
       - name: Build and test
         run: |
-          cargo build --verbose --all-features --workspace
-          cargo test --verbose --all-features --workspace
+          cargo +nightly build --verbose --all-features --workspace
+          cargo +nightly test --verbose --all-features --workspace
+
+  # Enforces the `rust-version` (MSRV) declared in `Cargo.toml` by
+  # compiling the workspace with that exact toolchain. Without this job the
+  # field is a promise, not a contract — a dependency bump that raises the
+  # minimum would only be caught by a downstream consumer building on an
+  # older Rust.
+  test-msrv:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: "1.88"
+      - name: Install system dependencies
+        run: |
+          sudo apt update -qq
+          sudo apt-get -qq install pkg-config libssl-dev git
+      - name: Compile with MSRV
+        run: cargo +1.88 check --workspace --all-targets --all-features --locked --verbose

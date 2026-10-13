@@ -35,19 +35,19 @@ async fn main() -> Result<()> {
     let response = client
         .export()
         .users_by_ids(&ExportUsersByIdsRequest {
-            external_ids: Some(external_ids),
-            fields_to_export: Some(vec![
+            external_ids,
+            fields_to_export: vec![
                 "external_id".into(),
                 "email".into(),
                 "first_name".into(),
                 "last_name".into(),
-            ]),
+            ],
             ..Default::default()
         })
         .send()
         .await?;
 
-    println!("message: {}", response.message);
+    println!("message: {:?}", response.message);
     println!("users returned: {}", response.users.len());
     println!("invalid ids: {:?}", response.invalid_user_ids);
 

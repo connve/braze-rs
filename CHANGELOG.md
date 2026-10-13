@@ -4,6 +4,49 @@ All notable changes are documented here. Format follows [Keep a Changelog](https
 
 ## [Unreleased]
 
+## [0.2.0]
+
+### Changed
+- **Breaking:** no API feature is enabled by default.
+  - `braze = "0.1"` → `braze = { version = "0.2", features = ["export"] }`
+- **Breaking:** `Credentials::api_key` is a `SecretString`, and `Credentials` no longer implements `Serialize`. `api_key: "...".into()` still works.
+- **Breaking:** `export::UserAlias` is now the same type as `messaging::UserAlias`.
+- **Breaking:** `export::ExportUsersByIdsRequest`, `ExportUsersByIdsResponse` and `ExportedUser` are the generated types. List fields are `Vec` instead of `Option<Vec>`, and `message` is `Option<String>`.
+  - `external_ids: Some(vec![...])` → `external_ids: vec![...]`
+- Every operation in the generated client accepts both 200 and 201 as success.
+- `Builder::build` trims whitespace around the API key. A key that isn't valid in an HTTP header fails with `Error::InvalidApiKey`; before, every request failed with `MissingApiKey`.
+- `Builder::build` rejects a `rest_endpoint` that can't carry a path, such as `mailto:`.
+- Request paths are built from percent-encoded segments.
+- `tracing` is an optional dependency, enabled by `trace`.
+- The `export` usage example moved from the crate root to the `export` module docs.
+- Workspace lints live in `[workspace.lints.clippy]`. `clippy::all` is denied, and suppressions must use `#[expect(lint, reason = "...")]`.
+- `resolver = "3"`, and `rust-toolchain.toml` pins stable.
+- CI: `dtolnay/rust-toolchain` replaces the archived `actions-rs/toolchain`. New `test-msrv` job (Rust 1.88, `--locked`). Clippy runs for each feature with `cargo hack`. The integration job runs every test file. The release job tests with all features.
+
+### Added
+- `messaging` feature and `Client::messaging()`:
+  - `POST /messages/send`
+  - `POST /campaigns/trigger/send`
+  - `POST /canvas/trigger/send`
+  - `POST /sends/id/create`
+  - `POST /transactional/v1/campaigns/{campaign_id}/send`
+- `Export::users_by_segment` for `POST /users/export/segment`.
+- `Export::users_by_global_control_group` for `POST /users/export/global_control_group`. `fields_to_export` is optional there, since only newer accounts need it.
+- `braze::RequestBuilder`, the builder behind every endpoint's type alias.
+- All request types implement `Default`, so literals can end with `..Default::default()`.
+- Responses keep unknown fields in `extra`, and messaging responses include Braze's non-fatal `errors`. `ExportedUser::custom_attributes` accepts `null`.
+- `Error::is_retryable` docs warn that retrying a messaging send can deliver it twice.
+- `Recipient` / `CanvasRecipient::send_to_existing_only` is an `Option<bool>` and is left out of the request unless set. Braze rejects it for alias recipients.
+- `.header(name, value)` and `.headers(map)` on every request builder, with `reqwest::RequestBuilder` semantics.
+- `Builder::default_headers(HeaderMap)`. Per-call headers with the same name take precedence.
+- `Error::InvalidHeader { name }` for an invalid header or a reserved one (`Authorization`, `Content-Type`, `Content-Length`, `Transfer-Encoding`, `Accept`, `Host`, `User-Agent`). Returned before any request is sent.
+- `Error::InvalidPathSegment { segment }` for an ID that is empty, `.`, `..`, or contains control characters. Returned before any request is sent.
+- Re-exports: `braze::header` (`reqwest::header`), `braze::chrono`, `braze::secrecy`.
+- docs.rs builds with all features and shows which feature each item needs.
+- `trigger_campaign` and `export_segment` examples.
+- Mock tests for every endpoint. Live tests only use unknown IDs, so they never send a message or start an export.
+- `.githooks/pre-commit`: format check, clippy (each feature via `cargo hack` when installed, and all features), tests, `cargo audit`. It refuses to run with unstaged changes. Enable with `git config core.hooksPath .githooks`.
+
 ## [0.1.0] - 2026-06-23
 
 ### Added

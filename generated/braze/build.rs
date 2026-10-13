@@ -2,12 +2,26 @@ use std::env;
 use std::fs;
 use std::path::PathBuf;
 
+use openapiv3::{ObjectType, OpenAPI, ReferenceOr, SchemaKind, Type};
+
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let spec_path = PathBuf::from(env::var("CARGO_MANIFEST_DIR")?).join("openapi.yaml");
     let spec_content = fs::read_to_string(&spec_path)?;
-    let spec: openapiv3::OpenAPI = serde_yaml::from_str(&spec_content)?;
+    let spec: OpenAPI = serde_yaml::from_str(&spec_content)?;
 
-    let mut generator = progenitor::Generator::default();
+    // typify only derives `Default` when every field is optional. Request
+    // types with a required field get it too, so callers can write
+    // `..Default::default()` and stay source-compatible when the spec gains
+    // optional fields. The required field defaults to empty and Braze rejects
+    // the request if the caller doesn't set it.
+    let mut default_patch = progenitor::TypePatch::default();
+    default_patch.with_derive("Default");
+    let mut settings = progenitor::GenerationSettings::default();
+    for type_name in request_types_with_required_fields(&spec) {
+        settings.with_patch(type_name, &default_patch);
+    }
+
+    let mut generator = progenitor::Generator::new(&settings);
     let tokens = generator.generate_tokens(&spec)?;
     let content = tokens.to_string();
 
@@ -17,4 +31,37 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("cargo:rerun-if-changed=openapi.yaml");
 
     Ok(())
+}
+
+/// Component schemas used as a JSON request body that have at least one
+/// required field.
+fn request_types_with_required_fields(spec: &OpenAPI) -> Vec<String> {
+    let Some(components) = &spec.components else {
+        return Vec::new();
+    };
+
+    let mut names: Vec<String> = spec
+        .paths
+        .paths
+        .values()
+        .filter_map(ReferenceOr::as_item)
+        .flat_map(|item| item.iter())
+        .filter_map(|(_, operation)| operation.request_body.as_ref()?.as_item())
+        .flat_map(|body| body.content.values())
+        .filter_map(|media| match media.schema.as_ref()? {
+            ReferenceOr::Reference { reference } => reference
+                .strip_prefix("#/components/schemas/")
+                .map(str::to_owned),
+            ReferenceOr::Item(_) => None,
+        })
+        .filter(|name| {
+            matches!(
+                components.schemas.get(name).and_then(ReferenceOr::as_item).map(|schema| &schema.schema_kind),
+                Some(SchemaKind::Type(Type::Object(ObjectType { required, .. }))) if !required.is_empty()
+            )
+        })
+        .collect();
+    names.sort();
+    names.dedup();
+    names
 }

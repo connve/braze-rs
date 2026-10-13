@@ -1,24 +1,31 @@
 [workspace]
-resolver = "2"
+resolver = "3"
 members = ["braze", "generated/braze"]
 
 [workspace.package]
-version = "0.1.0"
+version = "0.2.0"
 authors = ["CONNVE"]
 license = "MPL-2.0"
 edition = "2021"
 rust-version = "1.88"
 description = "Unofficial Rust SDK for Braze APIs"
 repository = "https://github.com/connve/braze-rs"
-homepage = "https://github.com/connve/braze-rs"
 documentation = "https://docs.rs/braze"
 readme = "README.md"
 keywords = ["braze", "sdk", "api", "messaging"]
 categories = ["api-bindings", "asynchronous"]
 publish = true
 
+[workspace.lints.clippy]
+all = { level = "deny", priority = -1 }
+# Suppressions must use `#[expect(lint, reason = "...")]`, which clippy reports
+# as unfulfilled once the underlying lint stops firing. A plain `#[allow]`
+# stays silent forever, so an obsolete suppression is never noticed.
+allow_attributes = "deny"
+allow_attributes_without_reason = "deny"
+
 [workspace.dependencies]
-braze_generated = { path = "generated/braze", version = "0.1.0" }
+braze_generated = { path = "generated/braze", version = "0.2.0" }
 tokio = { version = "1.48", default-features = false, features = [
     "macros",
     "rt-multi-thread",
@@ -31,8 +38,9 @@ reqwest = { version = "0.13", default-features = false, features = [
     "rustls",
 ] }
 thiserror = { version = "2.0", default-features = false, features = ["std"] }
+secrecy = { version = "0.10", default-features = false, features = ["serde"] }
 url = { version = "2.5", default-features = false }
-tracing = { version = "0.1", default-features = false, features = ["std", "attributes"] }
+tracing = { version = "0.1", default-features = false, features = ["std"] }
 tracing-subscriber = { version = "0.3", default-features = false, features = [
     "fmt",
     "ansi",
@@ -43,7 +51,6 @@ chrono = { version = "0.4", default-features = false, features = [
 ] }
 anyhow = { version = "1.0", default-features = false, features = ["std"] }
 bytes = { version = "1.11", default-features = false, features = ["std"] }
-futures = { version = "0.3", default-features = false, features = ["std"] }
 progenitor = "0.13"
 progenitor-client = "0.13"
 openapiv3 = { version = "2.2", default-features = false }

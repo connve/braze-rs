@@ -9,26 +9,18 @@
 //! ## Quick start
 //!
 //! ```no_run
-//! # async fn run() -> Result<(), braze::Error> {
-//! use braze::{Client, export::ExportUsersByIdsRequest};
+//! use braze::Client;
 //!
+//! # fn main() -> Result<(), Box<dyn std::error::Error>> {
 //! let client = Client::builder()
-//!     .credentials_file(std::env::var("BRAZE_CREDENTIALS").unwrap())?
+//!     .credentials_file(std::env::var("BRAZE_CREDENTIALS")?)?
 //!     .build()?;
-//!
-//! let response = client
-//!     .export()
-//!     .users_by_ids(&ExportUsersByIdsRequest {
-//!         external_ids: Some(vec!["user_1".into()]),
-//!         fields_to_export: Some(vec!["email".into(), "first_name".into()]),
-//!         ..Default::default()
-//!     })
-//!     .send()
-//!     .await?;
-//!
-//! println!("{} users returned", response.users.len());
-//! # Ok(()) }
+//! # let _ = client;
+//! # Ok(())
+//! # }
 //! ```
+//!
+//! See module-level docs for per-API examples: `export`, `messaging`.
 //!
 //! ## Authentication
 //!
@@ -40,11 +32,38 @@
 //!
 //! ## Cargo features
 //!
-//! - `export` (default) — `/users/export/*` endpoints.
-//! - `trace` — `#[tracing::instrument]` on public async methods.
+//! Each API surface is gated behind a feature. None are enabled by default.
+//! The generated client in [`generated`] is always compiled in full.
+//!
+//! - `export` — `/users/export/*` endpoints.
+//! - `messaging` — messaging endpoints (`/messages/send`, `/campaigns/trigger/send`, etc.).
+//! - `trace` — `#[tracing::instrument]` on public async methods; pulls in `tracing`.
+//!
+//! ```toml
+//! braze = { version = "0.2", features = ["export", "messaging"] }
+//! ```
 
 #![deny(missing_docs)]
 #![warn(rust_2018_idioms)]
+#![cfg_attr(docsrs, feature(doc_cfg))]
+
+/// Re-export of [`chrono`], which appears in this crate's public API.
+///
+/// Depend on this re-export rather than adding `chrono` separately, so the
+/// version stays in step with the one the SDK was built against.
+pub use chrono;
+
+/// Re-export of [`reqwest::header`], whose types appear in this crate's public
+/// API ([`Builder::default_headers`] and the `.header()` / `.headers()`
+/// methods on every request builder).
+///
+/// Depend on this re-export rather than adding `reqwest` separately, so the
+/// version stays in step with the one the SDK was built against.
+pub use reqwest::header;
+
+/// Re-export of [`secrecy`], whose [`SecretString`](secrecy::SecretString)
+/// holds [`Credentials::api_key`].
+pub use secrecy;
 
 /// Default Braze REST API surface targeted by this crate.
 ///
@@ -55,14 +74,23 @@ pub const DEFAULT_API_VERSION: &str = "2025-10";
 
 mod client;
 mod error;
-
+mod headers;
+#[cfg(feature = "_api")]
 mod http;
+#[cfg(feature = "_api")]
+mod request;
 
 #[cfg(feature = "export")]
 pub mod export;
 
+#[cfg(feature = "messaging")]
+pub mod messaging;
+
 pub use client::{Builder, Client, Credentials};
 pub use error::{Error, Result};
+#[cfg(feature = "_api")]
+#[cfg_attr(docsrs, doc(cfg(any(feature = "export", feature = "messaging"))))]
+pub use request::RequestBuilder;
 
 /// Re-export of the raw `progenitor`-generated client.
 ///
