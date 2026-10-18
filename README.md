@@ -15,7 +15,7 @@ Unofficial Rust SDK for Braze APIs.
 
 ```toml
 [dependencies]
-braze = { version = "0.3", features = ["export"] }
+braze = { version = "0.3", features = ["export", "messaging"] }
 ```
 
 ```rust
@@ -27,11 +27,10 @@ let client = braze::Client::builder()
 
 ## Coverage
 
-| API | Feature | Endpoints |
+| API | Feature | Methods |
 | --- | --- | --- |
-| Export | `export` | `POST /users/export/ids`, `POST /users/export/segment`, `POST /users/export/global_control_group` |
-| Messaging | `messaging` | `POST /messages/send`, `POST /campaigns/trigger/send`, `POST /canvas/trigger/send`, `POST /sends/id/create` |
-| Messaging | `messaging` | `POST /transactional/v1/campaigns/{campaign_id}/send` |
+| Export | `export` | [`users_by_ids`](https://www.braze.com/docs/api/endpoints/export/user_data/post_users_identifier/), [`users_by_segment`](https://www.braze.com/docs/api/endpoints/export/user_data/post_users_segment/), [`users_by_global_control_group`](https://www.braze.com/docs/api/endpoints/export/user_data/post_users_global_control_group/) |
+| Messaging | `messaging` | [`send_messages`](https://www.braze.com/docs/api/endpoints/messaging/send_messages/post_send_messages/), [`send_triggered_campaigns`](https://www.braze.com/docs/api/endpoints/messaging/send_messages/post_send_triggered_campaigns/), [`send_triggered_canvases`](https://www.braze.com/docs/api/endpoints/messaging/send_messages/post_send_triggered_canvases/), [`create_send_ids`](https://www.braze.com/docs/api/endpoints/messaging/send_messages/post_create_send_ids/), [`send_transactional_message`](https://www.braze.com/docs/api/endpoints/messaging/send_messages/post_send_transactional_message/) |
 
 ## Contributing
 

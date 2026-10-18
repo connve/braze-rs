@@ -3,7 +3,7 @@ resolver = "3"
 members = ["braze", "generated/braze"]
 
 [workspace.package]
-version = "0.3.0"
+version = "0.3.1"
 authors = ["CONNVE"]
 license = "MPL-2.0"
 edition = "2021"
@@ -25,7 +25,7 @@ allow_attributes = "deny"
 allow_attributes_without_reason = "deny"
 
 [workspace.dependencies]
-braze_generated = { path = "generated/braze", version = "=0.3.0" }
+braze_generated = { path = "generated/braze", version = "=0.3.1" }
 tokio = { version = "1.48", default-features = false, features = [
     "macros",
     "rt-multi-thread",

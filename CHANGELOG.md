@@ -4,6 +4,11 @@ All notable changes are documented here. Format follows [Keep a Changelog](https
 
 ## [Unreleased]
 
+## [0.3.1]
+
+### Changed
+- README coverage table lists the SDK methods, linked to the Braze docs.
+
 ## [0.3.0]
 
 ### Changed
