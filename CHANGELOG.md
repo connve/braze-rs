@@ -4,6 +4,18 @@ All notable changes are documented here. Format follows [Keep a Changelog](https
 
 ## [Unreleased]
 
+## [0.3.0]
+
+### Changed
+- The client takes `api_key` and `base_url` on the builder. Reading credentials from a file is removed.
+- `Credentials` holds only `api_key`.
+- `Error::InvalidEndpoint` is now `Error::InvalidBaseUrl`.
+- `Error::Api`'s message leaves out the response body.
+- `DEFAULT_API_VERSION` is removed.
+
+### Added
+- `Error::retry_after()` for 429 responses.
+
 ## [0.2.0]
 
 ### Changed

@@ -6,7 +6,8 @@
 //! # #[tokio::main]
 //! # async fn main() -> Result<(), Box<dyn std::error::Error>> {
 //! let client = Client::builder()
-//!     .credentials_file(std::env::var("BRAZE_CREDENTIALS")?)?
+//!     .api_key(std::env::var("BRAZE_API_KEY")?)
+//!     .base_url("https://rest.iad-01.braze.com")
 //!     .build()?;
 //!
 //! let response = client
@@ -46,8 +47,6 @@ impl<'a> Export<'a> {
 
     /// `POST /users/export/ids` — export user profiles by identifier.
     ///
-    /// Returns a request builder; dispatch with [`RequestBuilder::send`].
-    ///
     /// Set at least one identifier. Braze allows up to 50 `external_ids` or
     /// `user_aliases` per call, but only one `device_id`, `email_address` or
     /// `phone`. Accounts created after 2024-08-22 must set
@@ -61,12 +60,12 @@ impl<'a> Export<'a> {
     /// `POST /users/export/segment` — start an export of every user in a
     /// segment.
     ///
-    /// Returns a request builder; dispatch with [`RequestBuilder::send`].
-    ///
     /// The export runs asynchronously. Files go to your configured S3, Azure
     /// or GCS bucket; without one, the response carries a temporary `url`.
-    /// Braze returns 429 if an export of the same segment is already running.
-    /// See the [Braze docs][docs].
+    /// Braze returns 429 if an export of the same segment is already running;
+    /// [`Error::retry_after`](crate::Error::retry_after) then gives the
+    /// rate-limit window, not when the running export ends. See the
+    /// [Braze docs][docs].
     ///
     /// [docs]: https://www.braze.com/docs/api/endpoints/export/user_data/post_users_segment/
     pub fn users_by_segment<'r>(
@@ -78,8 +77,6 @@ impl<'a> Export<'a> {
 
     /// `POST /users/export/global_control_group` — start an export of every
     /// user in the Global Control Group.
-    ///
-    /// Returns a request builder; dispatch with [`RequestBuilder::send`].
     ///
     /// The export runs asynchronously, with the same delivery as
     /// [`Export::users_by_segment`]. See the [Braze docs][docs].

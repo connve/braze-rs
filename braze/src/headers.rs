@@ -10,13 +10,8 @@ use reqwest::header::{
 
 use crate::error::{Error, Result};
 
-/// Headers that callers must not set via `default_headers` or per-call
-/// overrides.
-///
-/// `Authorization` carries the API key, `Content-Type` / `Accept` are fixed to
-/// JSON, the framing headers (`Content-Length`, `Transfer-Encoding`, `Host`)
-/// are set by the HTTP stack, and `User-Agent` identifies the SDK. Overriding
-/// any of them would silently break or misroute requests.
+/// Headers the SDK or the HTTP stack sets; overriding them would break or
+/// misroute requests.
 const FORBIDDEN_HEADERS: &[HeaderName] = &[
     AUTHORIZATION,
     CONTENT_TYPE,
@@ -37,10 +32,8 @@ pub(crate) fn reject_forbidden(headers: &HeaderMap) -> Result<()> {
     }
 }
 
-/// Merges `incoming` into `target` with the semantics of
-/// `reqwest::RequestBuilder::headers`: every name present in `incoming`
-/// replaces the values already set for it, and other names are kept. All
-/// values of a multi-valued name are preserved.
+/// `reqwest::RequestBuilder::headers` semantics: names in `incoming` replace
+/// existing values, other names are kept.
 #[cfg(feature = "_api")]
 fn replace_names(target: &mut HeaderMap, incoming: HeaderMap) {
     for name in incoming.keys() {
@@ -51,8 +44,6 @@ fn replace_names(target: &mut HeaderMap, incoming: HeaderMap) {
     }
 }
 
-/// The headers to send on one request: the client's defaults, overridden by
-/// name by the per-call headers.
 #[cfg(feature = "_api")]
 pub(crate) fn merged(defaults: &HeaderMap, per_call: HeaderMap) -> HeaderMap {
     let mut headers = defaults.clone();
@@ -60,10 +51,8 @@ pub(crate) fn merged(defaults: &HeaderMap, per_call: HeaderMap) -> HeaderMap {
     headers
 }
 
-/// Accumulator for headers added to a request builder.
-///
-/// Header name/value conversion errors and forbidden-header detection are
-/// surfaced from `.send()` so callers don't need to handle them at chain time.
+/// Per-call headers. Errors surface from `.send()`, so chaining stays
+/// infallible.
 #[cfg(feature = "_api")]
 #[derive(Debug, Default)]
 pub(crate) struct HeaderBag {

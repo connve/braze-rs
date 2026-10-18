@@ -1,12 +1,12 @@
 //! Messaging endpoints (`/messages/send`, `/campaigns/trigger/send`, etc.).
 //!
-//! Every request type implements `Default`. Set the fields you need and end
-//! the literal with `..Default::default()`, so new optional fields in later
-//! releases don't break your code. Required fields (such as `campaign_id`)
-//! default to empty and Braze rejects the request if they are left unset.
+//! Request types implement `Default`; end literals with
+//! `..Default::default()` so new optional fields don't break your code.
+//! Required fields such as `campaign_id` default to empty, and Braze rejects
+//! the request if they're left unset.
 //!
-//! These endpoints aren't idempotent. A retry after a timeout or 5xx can
-//! deliver a message twice; see [`Error::is_retryable`](crate::Error::is_retryable).
+//! These endpoints aren't idempotent: a retry after a timeout or 5xx can
+//! deliver a message twice.
 //!
 //! ```no_run
 //! use braze::{
@@ -17,7 +17,8 @@
 //! # #[tokio::main]
 //! # async fn main() -> Result<(), Box<dyn std::error::Error>> {
 //! let client = Client::builder()
-//!     .credentials_file(std::env::var("BRAZE_CREDENTIALS")?)?
+//!     .api_key(std::env::var("BRAZE_API_KEY")?)
+//!     .base_url("https://rest.iad-01.braze.com")
 //!     .build()?;
 //!
 //! let response = client
@@ -62,8 +63,6 @@ impl<'a> Messaging<'a> {
 
     /// `POST /messages/send` — send messages immediately using the API only.
     ///
-    /// Returns a request builder; dispatch with [`RequestBuilder::send`].
-    ///
     /// See the [Braze docs][docs].
     ///
     /// [docs]: https://www.braze.com/docs/api/endpoints/messaging/send_messages/post_send_messages/
@@ -72,8 +71,6 @@ impl<'a> Messaging<'a> {
     }
 
     /// `POST /campaigns/trigger/send` — send campaigns using API-triggered delivery.
-    ///
-    /// Returns a request builder; dispatch with [`RequestBuilder::send`].
     ///
     /// See the [Braze docs][docs].
     ///
@@ -87,8 +84,6 @@ impl<'a> Messaging<'a> {
 
     /// `POST /canvas/trigger/send` — send Canvas messages using API-triggered delivery.
     ///
-    /// Returns a request builder; dispatch with [`RequestBuilder::send`].
-    ///
     /// See the [Braze docs][docs].
     ///
     /// [docs]: https://www.braze.com/docs/api/endpoints/messaging/send_messages/post_send_triggered_canvases/
@@ -101,8 +96,6 @@ impl<'a> Messaging<'a> {
 
     /// `POST /sends/id/create` — create send IDs for tracking message performance.
     ///
-    /// Returns a request builder; dispatch with [`RequestBuilder::send`].
-    ///
     /// See the [Braze docs][docs].
     ///
     /// [docs]: https://www.braze.com/docs/api/endpoints/messaging/send_messages/post_create_send_ids/
@@ -111,8 +104,6 @@ impl<'a> Messaging<'a> {
     }
 
     /// `POST /transactional/v1/campaigns/{campaign_id}/send` — send transactional emails.
-    ///
-    /// Returns a request builder; dispatch with [`RequestBuilder::send`].
     ///
     /// See the [Braze docs][docs].
     ///

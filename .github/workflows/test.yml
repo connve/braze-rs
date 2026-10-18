@@ -37,35 +37,36 @@ jobs:
         run: |
           sudo apt update -qq
           sudo apt-get -qq install pkg-config libssl-dev git
-      # Skips rather than fails while the repo has no BRAZE_CREDENTIALS
-      # secret. Once it is configured, switch to a hard failure so a missing
-      # secret can't turn this job silently green.
-      - name: Materialise credentials
-        id: creds
+      # Skips rather than fails while the repo has no test workspace
+      # configured. Once it is, switch to a hard failure so a missing secret
+      # can't turn this job silently green.
+      - name: Check the test workspace
+        id: workspace
         env:
-          CREDENTIALS_JSON: ${{ secrets.BRAZE_CREDENTIALS }}
+          BRAZE_API_KEY: ${{ secrets.BRAZE_API_KEY }}
+          BRAZE_BASE_URL: ${{ vars.BRAZE_BASE_URL }}
         run: |
-          if [ -n "$CREDENTIALS_JSON" ]; then
-            printf '%s' "$CREDENTIALS_JSON" > "$RUNNER_TEMP/braze_credentials.json"
-            echo "have_creds=true" >> "$GITHUB_OUTPUT"
+          if [ -n "$BRAZE_API_KEY" ] && [ -n "$BRAZE_BASE_URL" ]; then
+            echo "configured=true" >> "$GITHUB_OUTPUT"
           else
-            echo "::notice::BRAZE_CREDENTIALS secret is not set — skipping live integration tests"
+            echo "::notice::BRAZE_API_KEY secret or BRAZE_BASE_URL variable is not set, skipping live integration tests"
           fi
       - name: Run integration tests
-        if: steps.creds.outputs.have_creds == 'true'
+        if: steps.workspace.outputs.configured == 'true'
         env:
-          BRAZE_CREDENTIALS: ${{ runner.temp }}/braze_credentials.json
-        # `--test '*'` picks up every file under `braze/tests/`, so a new
-        # integration test file runs here without editing this workflow.
-        run: cargo test --verbose --all-features -p braze --test '*'
+          BRAZE_API_KEY: ${{ secrets.BRAZE_API_KEY }}
+          BRAZE_BASE_URL: ${{ vars.BRAZE_BASE_URL }}
+        # The live tests are `#[ignore]`d; `--ignored` runs only them, since
+        # the mocks already ran in `test-rust-latest`. `--test '*'` picks up
+        # every file under `braze/tests/` without editing this workflow.
+        run: cargo test --verbose --all-features -p braze --test '*' -- --ignored
 
   test-rust-nightly:
     runs-on: ubuntu-latest
     continue-on-error: true
     steps:
       - uses: actions/checkout@v4
-      # Explicit nightly override — `rust-toolchain.toml` pins stable, but
-      # this job intentionally exercises the nightly channel.
+      # `cargo +nightly` overrides the stable pin in `rust-toolchain.toml`.
       - uses: dtolnay/rust-toolchain@nightly
       - name: Install system dependencies
         run: |
@@ -76,11 +77,8 @@ jobs:
           cargo +nightly build --verbose --all-features --workspace
           cargo +nightly test --verbose --all-features --workspace
 
-  # Enforces the `rust-version` (MSRV) declared in `Cargo.toml` by
-  # compiling the workspace with that exact toolchain. Without this job the
-  # field is a promise, not a contract — a dependency bump that raises the
-  # minimum would only be caught by a downstream consumer building on an
-  # older Rust.
+  # Checks the `rust-version` in `Cargo.toml`, so a dependency bump that
+  # raises it fails here rather than for users.
   test-msrv:
     runs-on: ubuntu-latest
     steps:
@@ -94,3 +92,18 @@ jobs:
           sudo apt-get -qq install pkg-config libssl-dev git
       - name: Compile with MSRV
         run: cargo +1.88 check --workspace --all-targets --all-features --locked --verbose
+
+  # Builds each crate on its own, like `cargo publish`.
+  package:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      # rustup installs the toolchain pinned in `rust-toolchain.toml` on the
+      # first cargo call.
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Install system dependencies
+        run: |
+          sudo apt update -qq
+          sudo apt-get -qq install pkg-config libssl-dev git
+      - name: Package and verify each crate
+        run: cargo package --workspace --locked

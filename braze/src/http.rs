@@ -2,7 +2,9 @@
 
 use std::time::Duration;
 
+use chrono::{DateTime, Utc};
 use reqwest::header::{HeaderMap, HeaderValue, ACCEPT, AUTHORIZATION, CONTENT_TYPE};
+use reqwest::StatusCode;
 use serde::{de::DeserializeOwned, Serialize};
 use url::Url;
 
@@ -14,12 +16,8 @@ pub(crate) const USER_AGENT: &str = concat!("braze-rs/", env!("CARGO_PKG_VERSION
 const DEFAULT_TIMEOUT: Duration = Duration::from_secs(60);
 const DEFAULT_CONNECT_TIMEOUT: Duration = Duration::from_secs(15);
 
-/// Build the shared `reqwest::Client` used by every API module.
-///
-/// All requests get `Accept: application/json` and `User-Agent: braze-rs/<ver>`.
-/// Caller-supplied default headers are merged per request in [`post_json`]
-/// rather than set here, because reqwest keeps only the last value of a
-/// multi-valued default header.
+/// Caller default headers are merged per request in [`post_json`], not set
+/// here: reqwest keeps only the last value of a multi-valued default header.
 pub(crate) fn build_reqwest_client() -> Result<reqwest::Client> {
     let mut default_headers = HeaderMap::new();
     default_headers.insert(ACCEPT, HeaderValue::from_static("application/json"));
@@ -33,12 +31,9 @@ pub(crate) fn build_reqwest_client() -> Result<reqwest::Client> {
         .map_err(|source| Error::Http { source })
 }
 
-/// Append `segments` to `base`, percent-encoding each one so caller-supplied
-/// IDs cannot escape their path segment.
-///
-/// `url` drops `.` and `..` segments and strips tabs and newlines before it
-/// checks for them, so those are rejected here instead of being sent as a
-/// different path.
+/// Each segment is percent-encoded, so an ID can't escape it. `url` would
+/// silently drop `.` / `..` and strip control characters, so those are
+/// rejected instead.
 pub(crate) fn endpoint_url(base: &Url, segments: &[&str]) -> Result<Url> {
     if let Some(segment) = segments.iter().find(|segment| {
         segment.is_empty()
@@ -53,7 +48,7 @@ pub(crate) fn endpoint_url(base: &Url, segments: &[&str]) -> Result<Url> {
 
     let mut url = base.clone();
     url.path_segments_mut()
-        .map_err(|()| Error::InvalidEndpoint {
+        .map_err(|()| Error::InvalidBaseUrl {
             source: url::ParseError::RelativeUrlWithCannotBeABaseBase,
         })?
         .pop_if_empty()
@@ -61,12 +56,8 @@ pub(crate) fn endpoint_url(base: &Url, segments: &[&str]) -> Result<Url> {
     Ok(url)
 }
 
-/// POST a JSON body to the path built from `segments` (relative to the
-/// client's base URL), and deserialize the response into `R`.
-///
-/// `headers` are the per-call headers from the request builder, already
-/// checked against the reserved set by `HeaderBag::finish`. They override the
-/// client's default headers with the same name.
+/// `headers` are the per-call headers, already checked by
+/// `HeaderBag::finish`.
 pub(crate) async fn post_json<B, R>(
     client: &Client,
     segments: &[&str],
@@ -92,6 +83,10 @@ where
         .map_err(|source| Error::Http { source })?;
 
     let status = response.status();
+    let retry_after = match status {
+        StatusCode::TOO_MANY_REQUESTS => retry_after(response.headers(), Utc::now()),
+        _ => None,
+    };
     let bytes = response
         .bytes()
         .await
@@ -100,11 +95,25 @@ where
     if !status.is_success() {
         return Err(Error::Api {
             status,
+            retry_after,
             body: String::from_utf8_lossy(&bytes).into_owned(),
         });
     }
 
     serde_json::from_slice(&bytes).map_err(|source| Error::Deserialize { source })
+}
+
+/// Braze sends `X-RateLimit-Retry-After` in seconds when it knows the delay,
+/// and `X-RateLimit-Reset`, the end of the rate-limit window in UTC epoch
+/// seconds, on every response.
+fn retry_after(headers: &HeaderMap, now: DateTime<Utc>) -> Option<Duration> {
+    let header = |name: &str| headers.get(name)?.to_str().ok()?.trim().parse::<f64>().ok();
+
+    let seconds = match header("x-ratelimit-retry-after") {
+        Some(seconds) => seconds,
+        None => header("x-ratelimit-reset")? - now.timestamp() as f64,
+    };
+    Duration::try_from_secs_f64(seconds.max(0.0)).ok()
 }
 
 #[cfg(test)]
@@ -148,5 +157,54 @@ mod tests {
                 "{segment:?} should be rejected"
             );
         }
+    }
+
+    fn rate_limit_headers(pairs: &[(&'static str, &'static str)]) -> HeaderMap {
+        let mut headers = HeaderMap::new();
+        for (name, value) in pairs {
+            headers.insert(*name, HeaderValue::from_static(value));
+        }
+        headers
+    }
+
+    fn now() -> DateTime<Utc> {
+        DateTime::from_timestamp(1_700_000_000, 0).expect("valid timestamp")
+    }
+
+    #[test]
+    fn retry_after_prefers_the_explicit_delay() {
+        let headers = rate_limit_headers(&[
+            ("x-ratelimit-retry-after", "12"),
+            ("x-ratelimit-reset", "1700000060"),
+        ]);
+        assert_eq!(retry_after(&headers, now()), Some(Duration::from_secs(12)));
+    }
+
+    #[test]
+    fn retry_after_accepts_fractional_seconds() {
+        let headers = rate_limit_headers(&[("x-ratelimit-retry-after", "1.5")]);
+        assert_eq!(
+            retry_after(&headers, now()),
+            Some(Duration::from_millis(1500))
+        );
+    }
+
+    #[test]
+    fn retry_after_falls_back_to_the_window_reset() {
+        let headers = rate_limit_headers(&[("x-ratelimit-reset", "1700000045")]);
+        assert_eq!(retry_after(&headers, now()), Some(Duration::from_secs(45)));
+    }
+
+    #[test]
+    fn retry_after_is_zero_for_a_reset_in_the_past() {
+        let headers = rate_limit_headers(&[("x-ratelimit-reset", "1699999990")]);
+        assert_eq!(retry_after(&headers, now()), Some(Duration::ZERO));
+    }
+
+    #[test]
+    fn retry_after_is_none_without_rate_limit_headers() {
+        let headers = rate_limit_headers(&[("x-ratelimit-reset", "soon")]);
+        assert_eq!(retry_after(&headers, now()), None);
+        assert_eq!(retry_after(&HeaderMap::new(), now()), None);
     }
 }

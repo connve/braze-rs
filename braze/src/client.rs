@@ -1,6 +1,5 @@
 //! Braze client, credentials, and builder.
 
-use std::path::Path;
 #[cfg(feature = "_api")]
 use std::sync::Arc;
 
@@ -12,48 +11,28 @@ use url::Url;
 use crate::error::{Error, Result};
 use crate::headers;
 
-/// Authentication material for the Braze REST API.
+/// Authentication for one Braze workspace.
 ///
-/// `rest_endpoint` is the per-instance base URL (for example
-/// `https://rest.iad-01.braze.com`). The Braze dashboard surfaces this value
-/// under *Settings → API Keys*.
+/// Deserializes from `{ "api_key": "..." }`, ignoring other fields, so an
+/// application can load it from wherever it keeps secrets.
 #[derive(Debug, Clone, Deserialize)]
 pub struct Credentials {
-    /// REST API key with the permissions required by the calls you'll make.
-    ///
-    /// Redacted from `Debug` output and zeroed on drop.
+    /// REST API key from *Settings → APIs and Identifiers*, with the
+    /// permissions the calls need. Redacted from `Debug` output and zeroed on
+    /// drop.
     pub api_key: SecretString,
-    /// Per-instance REST endpoint, e.g. `https://rest.iad-01.braze.com`.
-    pub rest_endpoint: String,
-}
-
-impl Credentials {
-    /// Load credentials from a JSON file.
-    ///
-    /// ```json
-    /// { "api_key": "...", "rest_endpoint": "https://rest.iad-01.braze.com" }
-    /// ```
-    pub fn from_file(path: impl AsRef<Path>) -> Result<Self> {
-        let contents =
-            std::fs::read_to_string(path).map_err(|source| Error::CredentialsIo { source })?;
-        serde_json::from_str(&contents).map_err(|source| Error::CredentialsParse { source })
-    }
 }
 
 #[cfg(feature = "_api")]
 #[derive(Debug)]
 struct Inner {
-    /// `Bearer <api key>`, marked sensitive so `Debug` output redacts it.
     authorization: HeaderValue,
     base_url: Url,
     default_headers: HeaderMap,
     http: reqwest::Client,
 }
 
-/// Thread-safe Braze API client.
-///
-/// `Client` is cheap to clone — internal state lives behind an `Arc`. Use a
-/// single instance for the lifetime of your process.
+/// Braze API client for one workspace. Cheap to clone.
 #[derive(Debug, Clone)]
 #[non_exhaustive]
 pub struct Client {
@@ -67,20 +46,18 @@ impl Client {
         Builder::default()
     }
 
-    /// Access the `/users/export/*` endpoints.
+    /// Export endpoints (`/users/export/*`).
     #[cfg(feature = "export")]
     pub fn export(&self) -> crate::export::Export<'_> {
         crate::export::Export::new(self)
     }
 
-    /// Access the messaging endpoints.
+    /// Messaging endpoints.
     #[cfg(feature = "messaging")]
     pub fn messaging(&self) -> crate::messaging::Messaging<'_> {
         crate::messaging::Messaging::new(self)
     }
 
-    /// With no API feature enabled there is nothing to send requests with,
-    /// so the validated parts are dropped.
     #[cfg(not(feature = "_api"))]
     fn new(
         _authorization: HeaderValue,
@@ -121,66 +98,67 @@ impl Client {
     }
 }
 
-/// Builds `Bearer <api key>` once, marked sensitive so `Debug` output of the
-/// value and of reqwest's request redacts it.
+/// Marked sensitive, so `Debug` output of it and of reqwest requests redacts
+/// the key.
 fn authorization_header(api_key: &str) -> Result<HeaderValue> {
-    let bearer = SecretString::from(format!("Bearer {api_key}"));
+    let value = SecretString::from(format!("Bearer {api_key}"));
     let mut value =
-        HeaderValue::from_str(bearer.expose_secret()).map_err(|_| Error::InvalidApiKey)?;
+        HeaderValue::from_str(value.expose_secret()).map_err(|_| Error::InvalidApiKey)?;
     value.set_sensitive(true);
     Ok(value)
 }
 
-/// Endpoint paths are appended as segments, so the URL must be able to carry
-/// a path (`https://...`, not `mailto:...`).
-fn parse_base_url(rest_endpoint: &str) -> Result<Url> {
-    let base_url = Url::parse(rest_endpoint).map_err(|source| Error::InvalidEndpoint { source })?;
-    if base_url.cannot_be_a_base() {
-        return Err(Error::InvalidEndpoint {
+/// Paths are appended as segments, so the URL must be able to carry one.
+fn parse_base_url(base_url: &str) -> Result<Url> {
+    let url = Url::parse(base_url).map_err(|source| Error::InvalidBaseUrl { source })?;
+    if url.cannot_be_a_base() {
+        return Err(Error::InvalidBaseUrl {
             source: url::ParseError::RelativeUrlWithCannotBeABaseBase,
         });
     }
-    Ok(base_url)
+    Ok(url)
 }
 
 /// Fluent constructor for [`Client`].
 #[derive(Debug, Default)]
 pub struct Builder {
     credentials: Option<Credentials>,
+    base_url: Option<String>,
     default_headers: HeaderMap,
 }
 
 impl Builder {
-    /// Headers sent with every request made by the built client.
-    ///
-    /// Per-call headers set with `.header()` / `.headers()` on a request
-    /// builder take precedence over a default with the same name. Headers
-    /// reserved by the SDK (`Authorization`, `Content-Type`, `Content-Length`,
-    /// `Transfer-Encoding`, `Accept`, `Host`, `User-Agent`) make
-    /// [`Builder::build`] fail with [`Error::InvalidHeader`].
+    /// Headers sent with every request. Per-call headers of the same name
+    /// win. Reserved headers (`Authorization`, `Content-Type`,
+    /// `Content-Length`, `Transfer-Encoding`, `Accept`, `Host`, `User-Agent`)
+    /// make [`Builder::build`] fail with [`Error::InvalidHeader`].
     pub fn default_headers(mut self, headers: HeaderMap) -> Self {
         self.default_headers = headers;
         self
     }
 
-    /// Provide credentials directly.
+    /// The workspace's REST API key.
+    pub fn api_key(self, api_key: impl Into<SecretString>) -> Self {
+        self.credentials(Credentials {
+            api_key: api_key.into(),
+        })
+    }
+
+    /// Credentials loaded by the application.
     pub fn credentials(mut self, credentials: Credentials) -> Self {
         self.credentials = Some(credentials);
         self
     }
 
-    /// Load credentials from a JSON file at `path`.
-    pub fn credentials_file(mut self, path: impl AsRef<Path>) -> Result<Self> {
-        self.credentials = Some(Credentials::from_file(path)?);
-        Ok(self)
+    /// The REST endpoint of the workspace's Braze instance, such as
+    /// `https://rest.iad-01.braze.com`, from *Settings → APIs and
+    /// Identifiers*. Required: each instance has its own host.
+    pub fn base_url(mut self, base_url: impl Into<String>) -> Self {
+        self.base_url = Some(base_url.into());
+        self
     }
 
-    /// Build the client. Fails if no credentials were supplied, the API key
-    /// is blank or not valid in an HTTP header, `rest_endpoint` cannot be
-    /// parsed as a URL, or a default header is reserved by the SDK.
-    ///
-    /// Surrounding whitespace in the API key (such as a trailing newline from
-    /// a credentials file) is ignored.
+    /// Build the client. Whitespace around the API key is ignored.
     pub fn build(self) -> Result<Client> {
         headers::reject_forbidden(&self.default_headers)?;
 
@@ -190,7 +168,7 @@ impl Builder {
             return Err(Error::MissingApiKey);
         }
         let authorization = authorization_header(api_key)?;
-        let base_url = parse_base_url(&credentials.rest_endpoint)?;
+        let base_url = parse_base_url(self.base_url.as_deref().ok_or(Error::MissingBaseUrl)?)?;
 
         Client::new(authorization, base_url, self.default_headers)
     }
@@ -200,69 +178,67 @@ impl Builder {
 mod tests {
     use super::*;
 
+    const BASE_URL: &str = "https://rest.iad-01.braze.com";
+
     #[test]
     fn builder_rejects_empty_api_key() {
-        let result = Client::builder()
-            .credentials(Credentials {
-                api_key: "   ".into(),
-                rest_endpoint: "https://rest.iad-01.braze.com".into(),
-            })
-            .build();
+        let result = Client::builder().api_key("   ").base_url(BASE_URL).build();
         assert!(matches!(result, Err(Error::MissingApiKey)));
     }
 
     #[test]
-    fn builder_rejects_missing_credentials() {
-        assert!(matches!(
-            Client::builder().build(),
-            Err(Error::MissingApiKey)
-        ));
+    fn builder_rejects_missing_api_key() {
+        let result = Client::builder().base_url(BASE_URL).build();
+        assert!(matches!(result, Err(Error::MissingApiKey)));
     }
 
     #[test]
-    fn builder_rejects_invalid_endpoint() {
-        let result = Client::builder()
-            .credentials(Credentials {
-                api_key: "k".into(),
-                rest_endpoint: "not a url".into(),
-            })
-            .build();
-        assert!(matches!(result, Err(Error::InvalidEndpoint { .. })));
+    fn builder_rejects_missing_base_url() {
+        let result = Client::builder().api_key("k").build();
+        assert!(matches!(result, Err(Error::MissingBaseUrl)));
     }
 
     #[test]
-    fn builder_rejects_endpoint_without_path() {
+    fn builder_rejects_invalid_base_url() {
+        let result = Client::builder().api_key("k").base_url("not a url").build();
+        assert!(matches!(result, Err(Error::InvalidBaseUrl { .. })));
+    }
+
+    #[test]
+    fn builder_rejects_base_url_without_path() {
         let result = Client::builder()
-            .credentials(Credentials {
-                api_key: "k".into(),
-                rest_endpoint: "mailto:ops@example.com".into(),
-            })
+            .api_key("k")
+            .base_url("mailto:ops@example.com")
             .build();
-        assert!(matches!(result, Err(Error::InvalidEndpoint { .. })));
+        assert!(matches!(result, Err(Error::InvalidBaseUrl { .. })));
     }
 
     #[test]
     fn builder_rejects_api_key_not_valid_in_a_header() {
         let result = Client::builder()
-            .credentials(Credentials {
-                api_key: "abc\ndef".into(),
-                rest_endpoint: "https://rest.iad-01.braze.com".into(),
-            })
+            .api_key("abc\ndef")
+            .base_url(BASE_URL)
             .build();
         assert!(matches!(result, Err(Error::InvalidApiKey)));
+    }
+
+    #[test]
+    fn credentials_ignore_extra_fields() {
+        let parsed: Credentials =
+            serde_json::from_str(r#"{ "api_key": "k", "base_url": "https://example.com" }"#)
+                .expect("credentials parse");
+        assert_eq!(parsed.api_key.expose_secret(), "k");
     }
 
     #[cfg(feature = "_api")]
     #[test]
     fn builder_trims_api_key() {
         let client = Client::builder()
-            .credentials(Credentials {
-                api_key: "key-from-file\n".into(),
-                rest_endpoint: "https://rest.iad-01.braze.com".into(),
-            })
+            .api_key("key\n")
+            .base_url(BASE_URL)
             .build()
             .expect("client builds");
-        assert_eq!(client.authorization(), "Bearer key-from-file");
+        assert_eq!(client.authorization(), "Bearer key");
     }
 
     #[cfg(feature = "_api")]
@@ -270,11 +246,11 @@ mod tests {
     fn debug_output_does_not_contain_api_key() {
         let credentials = Credentials {
             api_key: "super-secret-key".into(),
-            rest_endpoint: "https://rest.iad-01.braze.com".into(),
         };
         let builder = Client::builder().credentials(credentials.clone());
         let client = Client::builder()
             .credentials(credentials.clone())
+            .base_url(BASE_URL)
             .build()
             .expect("client builds");
 
@@ -295,10 +271,8 @@ mod tests {
             HeaderValue::from_static("Bearer other"),
         );
         let result = Client::builder()
-            .credentials(Credentials {
-                api_key: "k".into(),
-                rest_endpoint: "https://rest.iad-01.braze.com".into(),
-            })
+            .api_key("k")
+            .base_url(BASE_URL)
             .default_headers(headers)
             .build();
         assert!(matches!(

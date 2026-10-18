@@ -1,9 +1,7 @@
-//! Offline smoke tests for the messaging endpoints.
+//! Offline tests for the messaging endpoints.
 //!
-//! These use `wiremock` to stub the messaging send endpoints so contributors
-//! can exercise the wrapper → HTTP → serde path without a live Braze account.
-//! They complement `tests/messaging.rs`, which hits the real API and is skipped
-//! when `BRAZE_CREDENTIALS` is unset.
+//! Runs against a local `wiremock` server and needs nothing else, so it
+//! isn't `#[ignore]`d.
 
 use braze::{
     header::{HeaderMap, HeaderValue},
@@ -13,7 +11,7 @@ use braze::{
         SendTriggeredCampaignsRequest, SendTriggeredCanvasesRequest, TransactionalRecipient,
         UserAlias,
     },
-    Client, Credentials,
+    Client,
 };
 use serde_json::{json, Value};
 use wiremock::matchers::{body_json, header, method, path};
@@ -54,10 +52,8 @@ async fn send_messages_sends_expected_request() -> Result {
         .await;
 
     let client = Client::builder()
-        .credentials(Credentials {
-            api_key: "fake-key".into(),
-            rest_endpoint: server.uri(),
-        })
+        .api_key("fake-key")
+        .base_url(server.uri())
         .build()?;
 
     let mut messages = Messages::default();
@@ -109,10 +105,8 @@ async fn send_triggered_campaigns_sends_expected_request() -> Result {
         .await;
 
     let client = Client::builder()
-        .credentials(Credentials {
-            api_key: "fake-key".into(),
-            rest_endpoint: server.uri(),
-        })
+        .api_key("fake-key")
+        .base_url(server.uri())
         .build()?;
 
     let response = client
@@ -163,10 +157,8 @@ async fn send_triggered_canvases_sends_expected_request() -> Result {
         .await;
 
     let client = Client::builder()
-        .credentials(Credentials {
-            api_key: "fake-key".into(),
-            rest_endpoint: server.uri(),
-        })
+        .api_key("fake-key")
+        .base_url(server.uri())
         .build()?;
 
     let response = client
@@ -214,10 +206,8 @@ async fn create_send_ids_sends_expected_request() -> Result {
         .await;
 
     let client = Client::builder()
-        .credentials(Credentials {
-            api_key: "fake-key".into(),
-            rest_endpoint: server.uri(),
-        })
+        .api_key("fake-key")
+        .base_url(server.uri())
         .build()?;
 
     let response = client
@@ -265,10 +255,8 @@ async fn send_transactional_message_sends_expected_request() -> Result {
         .await;
 
     let client = Client::builder()
-        .credentials(Credentials {
-            api_key: "fake-key".into(),
-            rest_endpoint: server.uri(),
-        })
+        .api_key("fake-key")
+        .base_url(server.uri())
         .build()?;
 
     let response = client
@@ -305,10 +293,8 @@ async fn send_transactional_message_encodes_campaign_id() -> Result {
         .await;
 
     let client = Client::builder()
-        .credentials(Credentials {
-            api_key: "fake-key".into(),
-            rest_endpoint: server.uri(),
-        })
+        .api_key("fake-key")
+        .base_url(server.uri())
         .build()?;
 
     let response = client
@@ -333,10 +319,8 @@ async fn campaign_id_that_url_would_rewrite_is_rejected_without_a_request() -> R
         .await;
 
     let client = Client::builder()
-        .credentials(Credentials {
-            api_key: "fake-key".into(),
-            rest_endpoint: server.uri(),
-        })
+        .api_key("fake-key")
+        .base_url(server.uri())
         .build()?;
 
     for campaign_id in ["", ".", "..", "..\t"] {
@@ -374,10 +358,8 @@ async fn alias_recipient_omits_send_to_existing_only() -> Result {
         .await;
 
     let client = Client::builder()
-        .credentials(Credentials {
-            api_key: "fake-key".into(),
-            rest_endpoint: server.uri(),
-        })
+        .api_key("fake-key")
+        .base_url(server.uri())
         .build()?;
 
     client
@@ -416,10 +398,8 @@ async fn send_messages_keeps_non_fatal_errors_and_unknown_fields() -> Result {
         .await;
 
     let client = Client::builder()
-        .credentials(Credentials {
-            api_key: "fake-key".into(),
-            rest_endpoint: server.uri(),
-        })
+        .api_key("fake-key")
+        .base_url(server.uri())
         .build()?;
 
     let response = client
@@ -453,10 +433,8 @@ async fn per_call_headers_merge_over_client_defaults() -> Result {
     defaults.insert("x-request-id", HeaderValue::from_static("client-default"));
 
     let client = Client::builder()
-        .credentials(Credentials {
-            api_key: "fake-key".into(),
-            rest_endpoint: server.uri(),
-        })
+        .api_key("fake-key")
+        .base_url(server.uri())
         .default_headers(defaults)
         .build()?;
 
@@ -490,10 +468,8 @@ async fn reserved_per_call_header_is_rejected_without_a_request() -> Result {
         .await;
 
     let client = Client::builder()
-        .credentials(Credentials {
-            api_key: "fake-key".into(),
-            rest_endpoint: server.uri(),
-        })
+        .api_key("fake-key")
+        .base_url(server.uri())
         .build()?;
 
     let err = client
@@ -533,10 +509,8 @@ async fn messaging_surfaces_api_error_body() -> Result {
         .await;
 
     let client = Client::builder()
-        .credentials(Credentials {
-            api_key: "fake-key".into(),
-            rest_endpoint: server.uri(),
-        })
+        .api_key("fake-key")
+        .base_url(server.uri())
         .build()?;
 
     let err = client
@@ -551,12 +525,48 @@ async fn messaging_surfaces_api_error_body() -> Result {
 
     assert!(!err.is_retryable(), "400 must not be retryable");
     match err {
-        braze::Error::Api { status, body } => {
+        braze::Error::Api { status, body, .. } => {
             assert_eq!(status.as_u16(), 400);
             assert!(body.contains("campaign_id is required"));
         }
         other => panic!("expected Error::Api, got {other:?}"),
     }
+
+    Ok(())
+}
+
+#[tokio::test]
+async fn rate_limited_request_reports_retry_after() -> Result {
+    let server = MockServer::start().await;
+
+    Mock::given(method("POST"))
+        .and(path("/campaigns/trigger/send"))
+        .respond_with(
+            ResponseTemplate::new(429)
+                .insert_header("x-ratelimit-retry-after", "30")
+                .set_body_json(json!({ "message": "Rate limit exceeded" })),
+        )
+        .expect(1)
+        .mount(&server)
+        .await;
+
+    let client = Client::builder()
+        .api_key("fake-key")
+        .base_url(server.uri())
+        .build()?;
+
+    let err = client
+        .messaging()
+        .send_triggered_campaigns(&SendTriggeredCampaignsRequest {
+            campaign_id: "campaign-123".into(),
+            ..Default::default()
+        })
+        .send()
+        .await
+        .expect_err("429 response must be an error");
+
+    assert!(err.is_retryable());
+    assert_eq!(err.retry_after(), Some(std::time::Duration::from_secs(30)));
 
     Ok(())
 }

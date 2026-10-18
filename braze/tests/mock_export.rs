@@ -1,16 +1,14 @@
-//! Offline smoke tests for the Export API.
+//! Offline tests for the export endpoints.
 //!
-//! These use `wiremock` to stub the export endpoints so contributors can
-//! exercise the wrapper → HTTP → serde path without a live Braze account.
-//! They complement `tests/export.rs`, which hits the real API and is skipped
-//! when `BRAZE_CREDENTIALS` is unset.
+//! Runs against a local `wiremock` server and needs nothing else, so it
+//! isn't `#[ignore]`d.
 
 use braze::chrono::{TimeZone, Utc};
 use braze::export::{
     ExportOutputFormat, ExportUsersByGlobalControlGroupRequest, ExportUsersByIdsRequest,
     ExportUsersBySegmentRequest,
 };
-use braze::{Client, Credentials};
+use braze::Client;
 use serde_json::{json, Value};
 use wiremock::matchers::{body_json, header, method, path};
 use wiremock::{Mock, MockServer, ResponseTemplate};
@@ -52,10 +50,8 @@ async fn users_by_ids_sends_expected_request() -> Result {
         .await;
 
     let client = Client::builder()
-        .credentials(Credentials {
-            api_key: "fake-key".into(),
-            rest_endpoint: server.uri(),
-        })
+        .api_key("fake-key")
+        .base_url(server.uri())
         .build()?;
 
     let response = client
@@ -111,10 +107,8 @@ async fn users_by_segment_sends_expected_request() -> Result {
         .await;
 
     let client = Client::builder()
-        .credentials(Credentials {
-            api_key: "fake-key".into(),
-            rest_endpoint: server.uri(),
-        })
+        .api_key("fake-key")
+        .base_url(server.uri())
         .build()?;
 
     let response = client
@@ -159,10 +153,8 @@ async fn users_by_global_control_group_sends_expected_request() -> Result {
         .await;
 
     let client = Client::builder()
-        .credentials(Credentials {
-            api_key: "fake-key".into(),
-            rest_endpoint: server.uri(),
-        })
+        .api_key("fake-key")
+        .base_url(server.uri())
         .build()?;
 
     let response = client
@@ -198,10 +190,8 @@ async fn users_by_ids_surfaces_api_error_body() -> Result {
         .await;
 
     let client = Client::builder()
-        .credentials(Credentials {
-            api_key: "fake-key".into(),
-            rest_endpoint: server.uri(),
-        })
+        .api_key("fake-key")
+        .base_url(server.uri())
         .build()?;
 
     let err = client
@@ -213,7 +203,7 @@ async fn users_by_ids_surfaces_api_error_body() -> Result {
 
     assert!(!err.is_retryable(), "400 must not be retryable");
     match err {
-        braze::Error::Api { status, body } => {
+        braze::Error::Api { status, body, .. } => {
             assert_eq!(status.as_u16(), 400);
             assert!(body.contains("at least one identifier is required"));
         }
