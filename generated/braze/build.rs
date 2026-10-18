@@ -9,11 +9,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let spec_content = fs::read_to_string(&spec_path)?;
     let spec: OpenAPI = serde_yaml::from_str(&spec_content)?;
 
-    // typify only derives `Default` when every field is optional. Request
-    // types with a required field get it too, so callers can write
-    // `..Default::default()` and stay source-compatible when the spec gains
-    // optional fields. The required field defaults to empty and Braze rejects
-    // the request if the caller doesn't set it.
+    // typify derives `Default` only when every field is optional. Request
+    // types with a required field get it too, so literals can end with
+    // `..Default::default()`; Braze rejects a required field left empty.
     let mut default_patch = progenitor::TypePatch::default();
     default_patch.with_derive("Default");
     let mut settings = progenitor::GenerationSettings::default();

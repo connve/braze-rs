@@ -1,12 +1,10 @@
 //! Errors returned by the Braze SDK.
 
+use std::time::Duration;
+
 use reqwest::StatusCode;
 
 /// All errors surfaced by the SDK.
-///
-/// Every public method that can fail returns this type. Use
-/// [`Error::is_retryable`] to decide whether to retry without pattern-matching
-/// the variants.
 #[derive(thiserror::Error, Debug)]
 #[non_exhaustive]
 pub enum Error {
@@ -18,28 +16,16 @@ pub enum Error {
     #[error("API key contains characters that are not allowed in an HTTP header")]
     InvalidApiKey,
 
-    /// The REST endpoint URL could not be parsed.
-    #[error("invalid Braze REST endpoint")]
-    InvalidEndpoint {
+    /// No base URL was provided when building the client.
+    #[error("base URL is required to call Braze")]
+    MissingBaseUrl,
+
+    /// The base URL could not be parsed, or can't carry a path.
+    #[error("invalid Braze base URL")]
+    InvalidBaseUrl {
         /// Underlying URL parse error.
         #[source]
         source: url::ParseError,
-    },
-
-    /// Reading credentials from disk failed.
-    #[error("failed to read credentials file")]
-    CredentialsIo {
-        /// Underlying I/O error.
-        #[source]
-        source: std::io::Error,
-    },
-
-    /// Parsing the credentials JSON failed.
-    #[error("failed to parse credentials file")]
-    CredentialsParse {
-        /// Underlying JSON decode error.
-        #[source]
-        source: serde_json::Error,
     },
 
     /// A transport-layer failure (connection reset, TLS, DNS, timeout, etc.).
@@ -50,13 +36,15 @@ pub enum Error {
         source: reqwest::Error,
     },
 
-    /// The Braze API returned a non-success status.
-    #[error("Braze API returned {status}: {body}")]
+    /// The Braze API returned a non-success status. The message leaves out
+    /// `body`, which can contain personal data.
+    #[error("Braze API returned {status}")]
     Api {
         /// HTTP status code from the response.
         status: StatusCode,
-        /// Raw response body so callers can surface Braze's structured
-        /// error details.
+        /// How long Braze asked to wait before retrying a 429, if it said.
+        retry_after: Option<Duration>,
+        /// Raw response body.
         body: String,
     },
 
@@ -68,18 +56,16 @@ pub enum Error {
         source: serde_json::Error,
     },
 
-    /// A request header is either reserved by the SDK (see
-    /// [`Builder::default_headers`](crate::Builder::default_headers)) or could
-    /// not be converted into a valid `HeaderName` / `HeaderValue`.
+    /// A request header is invalid, or reserved by the SDK (see
+    /// [`Builder::default_headers`](crate::Builder::default_headers)).
     #[error("invalid request header `{name}`")]
     InvalidHeader {
         /// The header name that was rejected.
         name: String,
     },
 
-    /// A caller-supplied ID used in the request path is empty, `.`, `..`, or
-    /// contains control characters, so it can't be sent as a single path
-    /// segment.
+    /// An ID used in the request path is empty, `.`, `..`, or contains
+    /// control characters.
     #[error("invalid path segment `{segment}`")]
     InvalidPathSegment {
         /// The rejected value.
@@ -88,15 +74,11 @@ pub enum Error {
 }
 
 impl Error {
-    /// Whether the operation is worth retrying.
+    /// `true` for transport failures, HTTP 408 / 425 / 429, and 5xx.
     ///
-    /// Returns `true` for transport failures, HTTP 408 / 425 / 429, and any
-    /// 5xx response. Auth and other 4xx responses return `false`.
-    ///
-    /// This only says the failure may be transient. Braze can have processed
-    /// the request before a timeout or 5xx reached you, and the messaging send
-    /// endpoints have no idempotency key, so retrying one of them can deliver
-    /// a message twice. Retry sends only if a duplicate is acceptable.
+    /// Braze may have processed the request before a timeout or 5xx.
+    /// Messaging sends have no idempotency key, so retrying one can deliver
+    /// a message twice.
     pub fn is_retryable(&self) -> bool {
         match self {
             Error::Http { source } => {
@@ -113,12 +95,20 @@ impl Error {
             }
             Error::MissingApiKey
             | Error::InvalidApiKey
-            | Error::InvalidEndpoint { .. }
-            | Error::CredentialsIo { .. }
-            | Error::CredentialsParse { .. }
+            | Error::MissingBaseUrl
+            | Error::InvalidBaseUrl { .. }
             | Error::Deserialize { .. }
             | Error::InvalidHeader { .. }
             | Error::InvalidPathSegment { .. } => false,
+        }
+    }
+
+    /// How long to wait before retrying a rate-limited (429) request. Prefer
+    /// it over your own backoff.
+    pub fn retry_after(&self) -> Option<Duration> {
+        match self {
+            Error::Api { retry_after, .. } => *retry_after,
+            _ => None,
         }
     }
 }
@@ -130,30 +120,45 @@ pub type Result<T> = std::result::Result<T, Error>;
 mod tests {
     use super::*;
 
+    fn api_error(status: StatusCode) -> Error {
+        Error::Api {
+            status,
+            retry_after: None,
+            body: String::new(),
+        }
+    }
+
     #[test]
     fn retryable_classification() {
-        let rate_limited = Error::Api {
-            status: StatusCode::TOO_MANY_REQUESTS,
-            body: String::new(),
-        };
-        assert!(rate_limited.is_retryable());
-
-        let server = Error::Api {
-            status: StatusCode::BAD_GATEWAY,
-            body: String::new(),
-        };
-        assert!(server.is_retryable());
-
-        let unauthorized = Error::Api {
-            status: StatusCode::UNAUTHORIZED,
-            body: String::new(),
-        };
-        assert!(!unauthorized.is_retryable());
-
+        assert!(api_error(StatusCode::TOO_MANY_REQUESTS).is_retryable());
+        assert!(api_error(StatusCode::BAD_GATEWAY).is_retryable());
+        assert!(!api_error(StatusCode::UNAUTHORIZED).is_retryable());
         assert!(!Error::MissingApiKey.is_retryable());
         assert!(!Error::InvalidHeader {
             name: String::new()
         }
         .is_retryable());
+    }
+
+    #[test]
+    fn retry_after_is_only_reported_for_api_errors() {
+        let throttled = Error::Api {
+            status: StatusCode::TOO_MANY_REQUESTS,
+            retry_after: Some(Duration::from_secs(7)),
+            body: String::new(),
+        };
+        assert_eq!(throttled.retry_after(), Some(Duration::from_secs(7)));
+        assert_eq!(Error::MissingApiKey.retry_after(), None);
+    }
+
+    #[test]
+    fn api_error_message_leaves_out_body() {
+        let error = Error::Api {
+            status: StatusCode::BAD_REQUEST,
+            retry_after: None,
+            body: "ada@example.com".into(),
+        };
+        let message = error.to_string();
+        assert!(!message.contains("ada@example.com"), "{message}");
     }
 }

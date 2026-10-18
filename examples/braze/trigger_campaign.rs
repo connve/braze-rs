@@ -1,18 +1,13 @@
 //! Run with:
 //!
 //! ```bash
-//! export BRAZE_CREDENTIALS=$PWD/credentials.json
+//! export BRAZE_API_KEY=...
+//! export BRAZE_BASE_URL=https://rest.iad-01.braze.com
 //! cargo run --example trigger_campaign --features messaging -- <campaign_id> user_id_1 user_id_2
 //! ```
 //!
 //! Sends an API-triggered campaign to existing users only. This delivers real
 //! messages — point it at a test campaign.
-//!
-//! `credentials.json` shape:
-//!
-//! ```json
-//! { "api_key": "...", "rest_endpoint": "https://rest.iad-01.braze.com" }
-//! ```
 
 use std::env;
 
@@ -26,8 +21,9 @@ use braze::{
 async fn main() -> Result<()> {
     tracing_subscriber::fmt::init();
 
-    let credentials_path = env::var("BRAZE_CREDENTIALS")
-        .context("set BRAZE_CREDENTIALS to a JSON file with api_key + rest_endpoint")?;
+    let api_key = env::var("BRAZE_API_KEY").context("set BRAZE_API_KEY to a REST API key")?;
+    let base_url =
+        env::var("BRAZE_BASE_URL").context("set BRAZE_BASE_URL to the instance's REST endpoint")?;
 
     let mut args = env::args().skip(1);
     let campaign_id = args
@@ -45,7 +41,8 @@ async fn main() -> Result<()> {
     }
 
     let client = Client::builder()
-        .credentials_file(&credentials_path)?
+        .api_key(api_key)
+        .base_url(base_url)
         .build()?;
 
     let response = client

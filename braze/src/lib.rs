@@ -2,75 +2,50 @@
 //!
 //! Unofficial Rust SDK for Braze APIs.
 //!
-//! The crate wraps a `progenitor`-generated client (re-exported as
-//! [`generated`]) and adds ergonomic auth, error handling, and per-endpoint
-//! modules.
-//!
-//! ## Quick start
-//!
 //! ```no_run
 //! use braze::Client;
 //!
 //! # fn main() -> Result<(), Box<dyn std::error::Error>> {
 //! let client = Client::builder()
-//!     .credentials_file(std::env::var("BRAZE_CREDENTIALS")?)?
+//!     .api_key(std::env::var("BRAZE_API_KEY")?)
+//!     .base_url("https://rest.iad-01.braze.com")
 //!     .build()?;
 //! # let _ = client;
 //! # Ok(())
 //! # }
 //! ```
 //!
-//! See module-level docs for per-API examples: `export`, `messaging`.
+//! Per-API examples are in the module docs.
 //!
-//! ## Authentication
-//!
-//! Braze uses a static REST API key passed as `Authorization: Bearer <key>`.
-//! The key and the per-instance `rest_endpoint` come from the Braze dashboard
-//! under *Settings → API Keys*. Both can be loaded from a JSON file pointed to
-//! by the `BRAZE_CREDENTIALS` environment variable — see
-//! [`Credentials::from_file`].
+//! The REST API key and the instance's REST endpoint (`base_url`) are under
+//! *Settings → APIs and Identifiers* in the Braze dashboard. The SDK takes
+//! both as values; where they come from is up to the application. The SDK
+//! doesn't retry; see [`Error::is_retryable`] and [`Error::retry_after`].
 //!
 //! ## Cargo features
 //!
-//! Each API surface is gated behind a feature. None are enabled by default.
-//! The generated client in [`generated`] is always compiled in full.
+//! None are enabled by default. [`generated`] is always compiled in full.
 //!
-//! - `export` — `/users/export/*` endpoints.
-//! - `messaging` — messaging endpoints (`/messages/send`, `/campaigns/trigger/send`, etc.).
-//! - `trace` — `#[tracing::instrument]` on public async methods; pulls in `tracing`.
+//! - `export`, `messaging` — one per API.
+//! - `trace` — `#[tracing::instrument]` on public async methods.
 //!
 //! ```toml
-//! braze = { version = "0.2", features = ["export", "messaging"] }
+//! braze = { version = "0.3", features = ["export", "messaging"] }
 //! ```
 
 #![deny(missing_docs)]
 #![warn(rust_2018_idioms)]
 #![cfg_attr(docsrs, feature(doc_cfg))]
 
-/// Re-export of [`chrono`], which appears in this crate's public API.
-///
-/// Depend on this re-export rather than adding `chrono` separately, so the
-/// version stays in step with the one the SDK was built against.
+/// Re-export, so callers use the same `chrono` version as the generated types.
 pub use chrono;
 
-/// Re-export of [`reqwest::header`], whose types appear in this crate's public
-/// API ([`Builder::default_headers`] and the `.header()` / `.headers()`
-/// methods on every request builder).
-///
-/// Depend on this re-export rather than adding `reqwest` separately, so the
-/// version stays in step with the one the SDK was built against.
+/// Re-export, so callers use the same `reqwest` version as
+/// [`Builder::default_headers`] and `.header()` / `.headers()`.
 pub use reqwest::header;
 
-/// Re-export of [`secrecy`], whose [`SecretString`](secrecy::SecretString)
-/// holds [`Credentials::api_key`].
+/// Re-export; [`Credentials::api_key`] is a [`SecretString`](secrecy::SecretString).
 pub use secrecy;
-
-/// Default Braze REST API surface targeted by this crate.
-///
-/// Braze does not version its REST API in the URL path, so this constant is
-/// informational only — it tracks the version of the upstream documentation
-/// the typed wrappers were last reconciled against.
-pub const DEFAULT_API_VERSION: &str = "2025-10";
 
 mod client;
 mod error;
@@ -92,7 +67,5 @@ pub use error::{Error, Result};
 #[cfg_attr(docsrs, doc(cfg(any(feature = "export", feature = "messaging"))))]
 pub use request::RequestBuilder;
 
-/// Re-export of the raw `progenitor`-generated client.
-///
-/// Use this when an endpoint isn't yet covered by an ergonomic wrapper.
+/// The raw `progenitor` crate, for endpoints the wrapper doesn't cover yet.
 pub use braze_generated as generated;

@@ -1,10 +1,6 @@
 #!/bin/sh
-# Pre-commit hook to check formatting, run clippy, tests, and cargo audit.
-#
-# Pins to the `stable` toolchain explicitly so this hook agrees with CI even
-# when a developer's default `rustup` toolchain is nightly. The repo's
-# `rust-toolchain.toml` already selects stable, so this only matters if that
-# file is missing or overridden.
+# Checks formatting, clippy, tests, and cargo audit. `+stable` matches CI even
+# when `rust-toolchain.toml` is overridden locally.
 TOOLCHAIN=stable
 
 # The checks below run on the working tree. Refuse to run when it differs from

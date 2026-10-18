@@ -11,9 +11,7 @@ use crate::header::{HeaderMap, HeaderName, HeaderValue};
 use crate::headers::HeaderBag;
 
 /// A request to one Braze endpoint, dispatched with [`send`](Self::send).
-///
-/// Endpoint methods return this under a per-endpoint alias, such as
-/// [`messaging::SendMessages`](crate::messaging::SendMessages).
+/// Endpoint methods return it under a per-endpoint alias.
 #[must_use = "request builders do nothing until `.send().await` is called"]
 #[cfg_attr(docsrs, doc(cfg(any(feature = "export", feature = "messaging"))))]
 pub struct RequestBuilder<'a, 'r, Req, Resp> {
@@ -24,8 +22,7 @@ pub struct RequestBuilder<'a, 'r, Req, Resp> {
     response: PhantomData<fn() -> Resp>,
 }
 
-// Written by hand rather than derived so rustdoc shows the public features on
-// it instead of the internal `_api` one.
+// Not derived, so rustdoc shows the public features instead of `_api`.
 #[cfg_attr(docsrs, doc(cfg(any(feature = "export", feature = "messaging"))))]
 impl<Req: fmt::Debug, Resp> fmt::Debug for RequestBuilder<'_, '_, Req, Resp> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -50,13 +47,11 @@ impl<'a, 'r, Req, Resp> RequestBuilder<'a, 'r, Req, Resp> {
         }
     }
 
-    /// Adds a single header to this request.
-    ///
-    /// Takes precedence over a client-level default header with the same
-    /// name. An invalid name or value, or a header reserved by the SDK (see
-    /// [`Builder::default_headers`](crate::Builder::default_headers)), is
-    /// reported as [`Error::InvalidHeader`](crate::Error::InvalidHeader) by
-    /// [`send`](Self::send).
+    /// Adds a header, overriding a client default of the same name. An
+    /// invalid or reserved header (see
+    /// [`Builder::default_headers`](crate::Builder::default_headers)) fails
+    /// [`send`](Self::send) with
+    /// [`Error::InvalidHeader`](crate::Error::InvalidHeader).
     pub fn header<N, V>(mut self, name: N, value: V) -> Self
     where
         N: TryInto<HeaderName> + AsRef<str>,
@@ -66,11 +61,8 @@ impl<'a, 'r, Req, Resp> RequestBuilder<'a, 'r, Req, Resp> {
         self
     }
 
-    /// Merges `headers` into this request's headers.
-    ///
-    /// Like `reqwest::RequestBuilder::headers`, a name present in `headers`
-    /// replaces any values already set for it on this request, and headers
-    /// with other names are kept.
+    /// Merges `headers` like `reqwest::RequestBuilder::headers`: names in
+    /// `headers` replace earlier values, other names are kept.
     pub fn headers(mut self, headers: HeaderMap) -> Self {
         self.headers.merge(headers);
         self

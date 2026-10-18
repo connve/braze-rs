@@ -1,74 +1,77 @@
-//! Shared test utilities for integration tests.
+//! Helpers for live tests against the test workspace whose REST API key is in
+//! `BRAZE_API_KEY` and whose REST endpoint is in `BRAZE_BASE_URL`.
 //!
-//! Provides a credentials helper and a skip macro for tests that require a
-//! live Braze account, addressed by `BRAZE_CREDENTIALS` (JSON file path).
+//! The checks return an error instead of panicking. They are macros so files
+//! that use only some of them don't hit `dead_code`.
 
 use braze::Client;
 use std::env;
 
-/// Environment variable pointing to the credentials JSON file.
-pub const CREDENTIALS_ENV: &str = "BRAZE_CREDENTIALS";
+/// The test workspace's REST API key.
+const API_KEY_ENV: &str = "BRAZE_API_KEY";
 
-/// Returns `true` if the credentials environment variable is set.
-pub fn credentials_available() -> bool {
-    env::var(CREDENTIALS_ENV).is_ok()
+/// The test workspace's REST endpoint, e.g. `https://rest.iad-01.braze.com`.
+const BASE_URL_ENV: &str = "BRAZE_BASE_URL";
+
+/// A client for the test workspace. Fails when either variable is unset, so
+/// an ignored test run without them can't pass.
+pub fn client() -> Result<Client, Box<dyn std::error::Error>> {
+    let api_key = env::var(API_KEY_ENV).map_err(|error| format!("{API_KEY_ENV}: {error}"))?;
+    let base_url = env::var(BASE_URL_ENV).map_err(|error| format!("{BASE_URL_ENV}: {error}"))?;
+    let client = Client::builder()
+        .api_key(api_key)
+        .base_url(base_url)
+        .build()?;
+    Ok(client)
 }
 
-/// Skips the current integration test when credentials are not configured.
-///
-/// Must be called at the start of every integration test. The test function
-/// must return `Result<(), Box<dyn std::error::Error>>`.
+/// `assert!` that returns an error instead of panicking.
 #[macro_export]
-macro_rules! skip_if_no_credentials {
-    () => {
-        if !common::credentials_available() {
-            eprintln!(
-                "Skipping integration test: set BRAZE_CREDENTIALS to a JSON file path to run."
-            );
-            return Ok(());
+macro_rules! ensure {
+    ($condition:expr, $($message:tt)+) => {
+        if !$condition {
+            return Err(format!($($message)+).into());
         }
     };
 }
 
-/// Builds a `Client` from the credentials JSON pointed to by
-/// `BRAZE_CREDENTIALS`.
-///
-/// The JSON file should contain:
-/// ```json
-/// {
-///   "api_key": "...",
-///   "rest_endpoint": "https://rest.iad-01.braze.com"
-/// }
-/// ```
-pub fn client() -> Result<Client, Box<dyn std::error::Error>> {
-    let path = env::var(CREDENTIALS_ENV)?;
-    let client = Client::builder().credentials_file(path)?.build()?;
-    Ok(client)
+/// Expects a non-retryable 4xx other than 401/403: the key worked and Braze
+/// rejected the request itself. A 401/403 means auth is broken or the key
+/// lacks the endpoint's permission, which the live tests exist to catch.
+#[macro_export]
+macro_rules! ensure_rejected {
+    ($result:expr) => {
+        match $result {
+            Err(error) => {
+                let rejected = matches!(
+                    &error,
+                    braze::Error::Api { status, .. }
+                        if status.is_client_error()
+                            && status.as_u16() != 401
+                            && status.as_u16() != 403
+                );
+                if !rejected || error.is_retryable() {
+                    return Err(format!(
+                        "expected a non-retryable 4xx other than 401/403, got: {error:?}"
+                    )
+                    .into());
+                }
+            }
+            Ok(value) => {
+                return Err(format!("expected a rejection, got: {value:?}").into());
+            }
+        }
+    };
 }
 
-/// An ID that doesn't exist in any workspace, so calls using it never send a
-/// message or start an export.
-pub fn unknown_id(prefix: &str) -> String {
-    use std::time::{SystemTime, UNIX_EPOCH};
-    let nanos = SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .map(|d| d.as_nanos())
-        .unwrap_or(0);
-    format!("braze-rs-test-{prefix}-{nanos:x}")
-}
-
-/// Asserts Braze accepted the key and rejected the request itself. A 401/403
-/// means auth is broken or the key lacks the endpoint's permission, which the
-/// live tests exist to catch.
-pub fn assert_rejected_by_braze<T: std::fmt::Debug>(result: braze::Result<T>) {
-    let err = result.expect_err("call against an unknown ID should fail");
-    assert!(
-        matches!(
-            &err,
-            braze::Error::Api { status, .. }
-                if status.is_client_error() && status.as_u16() != 401 && status.as_u16() != 403
-        ),
-        "expected a 4xx other than 401/403, got: {err:?}"
-    );
-    assert!(!err.is_retryable(), "4xx must not be retryable");
+/// A name no other run uses, for IDs that must not exist in the workspace.
+#[macro_export]
+macro_rules! unique_name {
+    ($prefix:expr) => {
+        format!(
+            "braze-rs-test-{}-{}",
+            $prefix,
+            ::braze::chrono::Utc::now().format("%Y%m%d%H%M%S%9f")
+        )
+    };
 }
