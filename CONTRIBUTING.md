@@ -139,7 +139,8 @@ have no idempotency key, so a retry after a timeout or 5xx can send twice.
 ## Dependencies
 
 - All versions live in the root `[workspace.dependencies]`.
-- `braze_generated` is pinned with `=x.y.z`; a release bumps both.
+- `braze_generated` is pinned with `=x.y.z`. The bump command below updates
+  the pin too.
 - `tokio` is a dev-dependency only.
 - MSRV is 1.88, the minimum required by `progenitor` 0.13. Raise it only when
   a dependency requires it, together with the `test-msrv` job and a CHANGELOG
@@ -174,5 +175,5 @@ git config core.hooksPath .githooks
 ## Releases
 
 Conventional commits (`feat:`, `fix:`, `chore:`). Bump with
-`cargo workspaces version --no-git-commit --yes <minor|patch>` and merge to
-`main`; the release workflow tags and publishes.
+`cargo workspaces version --no-git-commit --yes --exact --force '*' <minor|patch>`
+and merge to `main`; the release workflow tags and publishes.
