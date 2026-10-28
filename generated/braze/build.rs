@@ -7,7 +7,7 @@ use openapiv3::{ObjectType, OpenAPI, ReferenceOr, SchemaKind, Type};
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let spec_path = PathBuf::from(env::var("CARGO_MANIFEST_DIR")?).join("openapi.yaml");
     let spec_content = fs::read_to_string(&spec_path)?;
-    let spec: OpenAPI = serde_yaml::from_str(&spec_content)?;
+    let spec: OpenAPI = serde_saphyr::from_str(&spec_content)?;
 
     // typify derives `Default` only when every field is optional. Request
     // types with a required field get it too, so literals can end with
