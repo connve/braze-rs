@@ -4,6 +4,14 @@ All notable changes are documented here. Format follows [Keep a Changelog](https
 
 ## [Unreleased]
 
+## [0.3.2]
+
+### Changed
+- The generated crate reads the OpenAPI spec with `serde-saphyr` instead of the unmaintained `serde_yaml`, and builds `progenitor` without its `macro` feature. `unsafe-libyaml` is no longer in the dependency tree.
+
+### Fixed
+- Updated `rustls-webpki` to 0.103.16 (RUSTSEC-2026-0382) and `webpki-root-certs` to 1.0.11 (RUSTSEC-2026-0383).
+
 ## [0.3.1]
 
 ### Changed

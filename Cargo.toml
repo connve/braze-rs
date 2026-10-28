@@ -3,7 +3,7 @@ resolver = "3"
 members = ["braze", "generated/braze"]
 
 [workspace.package]
-version = "0.3.1"
+version = "0.3.2"
 authors = ["CONNVE"]
 license = "MPL-2.0"
 edition = "2021"
@@ -25,7 +25,7 @@ allow_attributes = "deny"
 allow_attributes_without_reason = "deny"
 
 [workspace.dependencies]
-braze_generated = { path = "generated/braze", version = "=0.3.1" }
+braze_generated = { path = "generated/braze", version = "=0.3.2" }
 tokio = { version = "1.48", default-features = false, features = [
     "macros",
     "rt-multi-thread",
@@ -51,8 +51,10 @@ chrono = { version = "0.4", default-features = false, features = [
 ] }
 anyhow = { version = "1.0", default-features = false, features = ["std"] }
 bytes = { version = "1.11", default-features = false, features = ["std"] }
-progenitor = "0.13"
+progenitor = { version = "0.13", default-features = false }
 progenitor-client = "0.13"
 openapiv3 = { version = "2.2", default-features = false }
-serde_yaml = { version = "0.9", default-features = false }
+serde-saphyr = { version = "2.0", default-features = false, features = [
+    "deserialize",
+] }
 wiremock = "0.6"
