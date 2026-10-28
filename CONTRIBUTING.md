@@ -142,7 +142,7 @@ have no idempotency key, so a retry after a timeout or 5xx can send twice.
 - `braze_generated` is pinned with `=x.y.z`. The bump command below updates
   the pin too.
 - `tokio` is a dev-dependency only.
-- MSRV is 1.88, the minimum required by `progenitor` 0.13. Raise it only when
+- MSRV is 1.89, the minimum required by `serde-saphyr` 2.0. Raise it only when
   a dependency requires it, together with the `test-msrv` job and a CHANGELOG
   entry.
 - Every single-feature build must pass clippy without `#[expect]`; gate

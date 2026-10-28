@@ -15,7 +15,7 @@ Unofficial Rust SDK for Braze APIs.
 
 ```toml
 [dependencies]
-braze = { version = "0.3", features = ["export", "messaging"] }
+braze = { version = "0.4", features = ["export", "messaging"] }
 ```
 
 ```rust

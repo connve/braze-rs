@@ -3,11 +3,11 @@ resolver = "3"
 members = ["braze", "generated/braze"]
 
 [workspace.package]
-version = "0.3.2"
+version = "0.4.0"
 authors = ["CONNVE"]
 license = "MPL-2.0"
 edition = "2021"
-rust-version = "1.88"
+rust-version = "1.89"
 description = "Unofficial Rust SDK for Braze APIs"
 repository = "https://github.com/connve/braze-rs"
 documentation = "https://docs.rs/braze"
@@ -25,7 +25,7 @@ allow_attributes = "deny"
 allow_attributes_without_reason = "deny"
 
 [workspace.dependencies]
-braze_generated = { path = "generated/braze", version = "=0.3.2" }
+braze_generated = { path = "generated/braze", version = "=0.4.0" }
 tokio = { version = "1.48", default-features = false, features = [
     "macros",
     "rt-multi-thread",

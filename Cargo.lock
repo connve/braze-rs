@@ -105,7 +105,7 @@ checksum = "b4388bee8683e3d04af747c73422af53102d2bd24d9eadb6cbc100baef4b43f8"
 
 [[package]]
 name = "braze"
-version = "0.3.2"
+version = "0.4.0"
 dependencies = [
  "anyhow",
  "braze_generated",
@@ -124,7 +124,7 @@ dependencies = [
 
 [[package]]
 name = "braze_generated"
-version = "0.3.2"
+version = "0.4.0"
 dependencies = [
  "bytes",
  "chrono",

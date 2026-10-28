@@ -4,9 +4,10 @@ All notable changes are documented here. Format follows [Keep a Changelog](https
 
 ## [Unreleased]
 
-## [0.3.2]
+## [0.4.0]
 
 ### Changed
+- **Breaking:** MSRV is 1.89.
 - The generated crate reads the OpenAPI spec with `serde-saphyr` instead of the unmaintained `serde_yaml`, and builds `progenitor` without its `macro` feature. `unsafe-libyaml` is no longer in the dependency tree.
 
 ### Fixed
